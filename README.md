@@ -50,5 +50,5 @@ This system is built for long-term sustainability, leveraging the **TALL Stack**
 
 1. **Clone the repository**
    ```bash
-   git clone [https://github.com/yourusername/whistleblower.git](https://github.com/yourusername/whistleblower.git)
-   cd whistleblower
+   git clone [https://github.com/dmasikondo/safe-report26.git](https://github.com/dmasikondo/safe-report26.git)
+   cd safe-report26
