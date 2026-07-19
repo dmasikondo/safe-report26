@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\RoleEnum;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -12,49 +14,51 @@ use Illuminate\Support\Str;
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
+    protected $model = User::class;
+
     protected static ?string $password;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
+            'first_name'        => fake()->firstName(),
+            'last_name'         => fake()->lastName(),
+            'email'             => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
-            'two_factor_secret' => null,
-            'two_factor_recovery_codes' => null,
-            'two_factor_confirmed_at' => null,
+            'password'          => static::$password ??= Hash::make('password'),
+            'remember_token'    => Str::random(10),
+            'is_active'         => true,
+            'last_login_at'     => null,
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
+    // ── States ────────────────────────────────────────────────────────────
+
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
+        return $this->state(fn () => ['email_verified_at' => null]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
     }
 
     /**
-     * Indicate that the model has two-factor authentication configured.
+     * Create a user and assign a role after creation.
+     *
+     * The role must already exist in the database — either seeded or
+     * created in the test's arrange step.
+     *
+     * Usage:
+     *   User::factory()->withRole(RoleEnum::Investigator)->create()
+     *   User::factory()->withRole(RoleEnum::Admin)->create()
      */
-    public function withTwoFactor(): static
+    public function withRole(RoleEnum $role): static
     {
-        return $this->state(fn (array $attributes) => [
-            'two_factor_secret' => encrypt('secret'),
-            'two_factor_recovery_codes' => encrypt(json_encode(['recovery-code-1'])),
-            'two_factor_confirmed_at' => now(),
-        ]);
+        return $this->afterCreating(function (User $user) use ($role) {
+            $roleModel = Role::where('name', $role->value)->firstOrFail();
+            $user->roles()->attach($roleModel);
+        });
     }
 }
