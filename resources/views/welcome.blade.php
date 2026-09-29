@@ -198,5 +198,29 @@
         @if (Route::has('login'))
             <div class="h-14.5 hidden lg:block"></div>
         @endif
+
+        {{-- ── SafeReport CTAs ── --}}
+        <section class="w-full lg:max-w-4xl max-w-[335px] mt-8 mb-4">
+            <div class="flex flex-col sm:flex-row items-center gap-4 rounded-xl border border-[#e3e3e0] dark:border-[#3E3E3A] bg-white dark:bg-[#161615] p-5 shadow-sm">
+                <div class="flex-1 text-center sm:text-left">
+                    <p class="text-sm font-semibold text-[#1b1b18] dark:text-[#EDEDEC]">SafeReport — Anonymous Whistleblowing</p>
+                    <p class="mt-0.5 text-[13px] text-[#706f6c] dark:text-[#A1A09A]">Report corruption, fraud or misconduct confidentially. No account required.</p>
+                </div>
+                <div class="flex items-center gap-3 shrink-0">
+                    <a
+                        href="{{ route('report.track') }}"
+                        class="inline-block px-4 py-1.5 border border-[#19140035] dark:border-[#3E3E3A] hover:border-[#1915014a] dark:hover:border-[#62605b] rounded-sm text-sm text-[#1b1b18] dark:text-[#EDEDEC] leading-normal"
+                    >
+                        Track report
+                    </a>
+                    <a
+                        href="{{ route('report.create') }}"
+                        class="inline-block px-4 py-1.5 bg-[#1b1b18] dark:bg-[#eeeeec] dark:text-[#1C1C1A] hover:bg-black dark:hover:bg-white border border-black dark:border-[#eeeeec] rounded-sm text-sm text-white leading-normal"
+                    >
+                        Submit a report
+                    </a>
+                </div>
+            </div>
+        </section>
     </body>
 </html>
