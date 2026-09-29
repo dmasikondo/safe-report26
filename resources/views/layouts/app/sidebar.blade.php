@@ -16,6 +16,31 @@
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>
+
+                {{-- Reports group: visible to all authenticated staff --}}
+                @auth
+                <flux:sidebar.group :heading="__('Reports')" class="grid">
+                    <flux:sidebar.item
+                        icon="clipboard-document-list"
+                        href="#"
+                        :current="request()->routeIs('staff.reports.*')"
+                        wire:navigate
+                    >
+                        {{ __('All Reports') }}
+                    </flux:sidebar.item>
+
+                    @if (auth()->user()->isSuperAdmin() || auth()->user()->isAdmin())
+                        <flux:sidebar.item
+                            icon="users"
+                            href="#"
+                            :current="request()->routeIs('staff.users.*')"
+                            wire:navigate
+                        >
+                            {{ __('Users') }}
+                        </flux:sidebar.item>
+                    @endif
+                </flux:sidebar.group>
+                @endauth
             </flux:sidebar.nav>
 
             <flux:spacer />
