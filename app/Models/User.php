@@ -15,6 +15,7 @@ use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use App\Enums\RoleEnum;
 
 #[Fillable(['first_name', 'last_name', 'email', 'password', 'is_active', 'last_login_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -83,22 +84,22 @@ class User extends Authenticatable implements PasskeyUser
 
     public function isSuperAdmin(): bool
     {
-        return $this->hasRole(Role::SUPERADMIN);
+        return $this->hasRole(RoleEnum::SUPERADMIN->value);
     }
 
     public function isAdmin(): bool
     {
-        return $this->hasAnyRole([Role::SUPERADMIN, Role::ADMIN]);
+        return $this->hasAnyRole([RoleEnum::SUPERADMIN->value, RoleEnum::ADMIN->value]);
     }
 
     public function isSupervisor(): bool
     {
-        return $this->hasAnyRole([Role::SUPERADMIN, Role::ADMIN, Role::SUPERVISOR]);
+        return $this->hasAnyRole([RoleEnum::SUPERADMIN->value, RoleEnum::ADMIN->value, RoleEnum::SUPERVISOR->value]);
     }
 
     public function isInvestigator(): bool
     {
-        return $this->hasRole(Role::INVESTIGATOR);
+        return $this->hasRole(RoleEnum::INVESTIGATOR->value);
     }
 
     // ── Role assignment ───────────────────────────────────────────────────
