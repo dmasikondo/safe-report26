@@ -104,6 +104,23 @@
     }
 }
 
+/*
+ * Navigation: tint the active and hovered link backgrounds with the accent
+ * (ocean blue in light mode, warm gold in dark mode). Flux only colours the
+ * active link's text by default.
+ */
+[data-flux-sidebar-item][data-current],
+[data-flux-navlist-item][data-current] {
+    background-color: color-mix(in oklab, var(--color-accent) 14%, transparent);
+    border-color: color-mix(in oklab, var(--color-accent) 35%, transparent);
+    font-weight: 500;
+}
+
+[data-flux-sidebar-item]:not([data-current]):hover,
+[data-flux-navlist-item]:not([data-current]):hover {
+    background-color: color-mix(in oklab, var(--color-accent) 8%, transparent);
+}
+
 [data-flux-field]:not(ui-radio, ui-checkbox) {
     @apply grid gap-2;
 }
