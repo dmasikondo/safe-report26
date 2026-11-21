@@ -60,29 +60,9 @@ class RoleFactory extends Factory
     private function definitionForEnum(RoleEnum $role): array
     {
         return [
-            'name'        => $role,            // the cast handles ->value automatically
-            'label'       => $this->labelFor($role),
-            'description' => $this->descriptionFor($role),
+            'name' => $role,            // the cast handles ->value automatically
+            'label' => $role->label(),
+            'description' => $role->description(),
         ];
-    }
-
-    private function labelFor(RoleEnum $role): string
-    {
-        return match ($role) {
-            RoleEnum::SUPERADMIN   => 'Super Administrator',
-            RoleEnum::ADMIN        => 'Administrator',
-            RoleEnum::SUPERVISOR   => 'Supervisor',
-            RoleEnum::INVESTIGATOR => 'Investigator',
-        };
-    }
-
-    private function descriptionFor(RoleEnum $role): string
-    {
-        return match ($role) {
-            RoleEnum::SUPERADMIN   => 'Full system access including audit log review and user management.',
-            RoleEnum::ADMIN        => 'Manages staff accounts and system configuration.',
-            RoleEnum::SUPERVISOR   => 'Oversees investigators; can escalate or reassign cases.',
-            RoleEnum::INVESTIGATOR => 'Receives, reviews, and manages assigned cases.',
-        };
     }
 }

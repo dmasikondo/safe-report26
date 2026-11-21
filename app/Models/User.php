@@ -3,19 +3,20 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\RoleEnum;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Enums\RoleEnum;
 
 #[Fillable(['first_name', 'last_name', 'email', 'password', 'is_active', 'last_login_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
@@ -35,7 +36,7 @@ class User extends Authenticatable implements PasskeyUser
             'email_verified_at' => 'datetime',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
         ];
     }
     // ── Relationship ──────────────────────────────────────────────────────
@@ -52,32 +53,32 @@ class User extends Authenticatable implements PasskeyUser
      * Uses the in-memory collection when roles are already eager-loaded,
      * falling back to a database query when they are not.
      */
-    public function hasRole(string|array $role): bool
+    public function hasRole(RoleEnum|string|array $role): bool
     {
-        $roles = is_array($role) ? $role : [$role];
-
-        if ($this->relationLoaded('roles')) {
-            return $this->roles->whereIn('name', $roles)->isNotEmpty();
-        }
-
-        return $this->roles()->whereIn('name', $roles)->exists();
+        return $this->hasAnyRole(is_array($role) ? $role : [$role]);
     }
 
     /**
      * Check whether the user holds any of the given roles.
-     * Accepts a variadic list or an array.
+     * Accepts a variadic list or an array of role names or RoleEnum cases.
      *
-     * @param array|string $roles
+     * @param  array<int, RoleEnum|string>|RoleEnum|string  $roles
      */
-    public function hasAnyRole(array|string $roles): bool
+    public function hasAnyRole(array|RoleEnum|string $roles): bool
     {
-        $roles = is_array($roles) ? $roles : func_get_args();
+        $roleNames = array_map(
+            fn (RoleEnum|string $role): string => $role instanceof RoleEnum ? $role->value : $role,
+            is_array($roles) ? $roles : func_get_args(),
+        );
 
         if ($this->relationLoaded('roles')) {
-            return $this->roles->whereIn('name', $roles)->isNotEmpty();
+            // Role::name is cast to RoleEnum, so compare on the backing value.
+            return $this->roles->contains(
+                fn (Role $role): bool => in_array($role->name->value, $roleNames, strict: true)
+            );
         }
 
-        return $this->roles()->whereIn('name', $roles)->exists();
+        return $this->roles()->whereIn('name', $roleNames)->exists();
     }
 
     // ── Convenience shortcuts ─────────────────────────────────────────────
@@ -100,6 +101,31 @@ class User extends Authenticatable implements PasskeyUser
     public function isInvestigator(): bool
     {
         return $this->hasRole(RoleEnum::INVESTIGATOR->value);
+    }
+
+    /**
+     * Roles this user is allowed to give to a new staff account.
+     * Superadmins may create any role; admins may create supervisors
+     * and investigators only.
+     *
+     * @return array<int, RoleEnum>
+     */
+    public function creatableRoles(): array
+    {
+        if ($this->isSuperAdmin()) {
+            return RoleEnum::cases();
+        }
+
+        if ($this->hasRole(RoleEnum::ADMIN)) {
+            return [RoleEnum::SUPERVISOR, RoleEnum::INVESTIGATOR];
+        }
+
+        return [];
+    }
+
+    public function canCreateRole(RoleEnum $role): bool
+    {
+        return in_array($role, $this->creatableRoles(), strict: true);
     }
 
     // ── Role assignment ───────────────────────────────────────────────────
@@ -170,6 +196,22 @@ class User extends Authenticatable implements PasskeyUser
         return $query->where('is_active', false);
     }
 
+    /**
+     * Active staff who can be handed a case: investigators and supervisors.
+     */
+    public function scopeAssignableToCases($query)
+    {
+        return $query->active()->whereHas('roles', fn ($roles) => $roles->whereIn('name', [
+            RoleEnum::INVESTIGATOR->value,
+            RoleEnum::SUPERVISOR->value,
+        ]));
+    }
+
+    public function assignedReports(): HasMany
+    {
+        return $this->hasMany(Report::class, 'assigned_to');
+    }
+
     // ── State helpers ─────────────────────────────────────────────────────
 
     public function recordLogin(): void
@@ -190,18 +232,19 @@ class User extends Authenticatable implements PasskeyUser
     protected function fullName(): Attribute
     {
         return Attribute::make(
-            get: fn() => $this->first_name . ' ' . $this->last_name,
+            get: fn () => $this->first_name.' '.$this->last_name,
         );
     }
+
     /**
      * Get the user's initials
      */
     public function initials(): string
     {
-        return Str::of($this->fullname)
+        return Str::of($this->full_name)
             ->explode(' ')
             ->take(2)
-            ->map(fn($word) => Str::substr($word, 0, 1))
+            ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
 }

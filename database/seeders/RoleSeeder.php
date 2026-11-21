@@ -24,38 +24,13 @@ class RoleSeeder extends Seeder
             Role::updateOrCreate(
                 ['name' => $case->value],
                 [
-                    'label'       => $this->labelFor($case),
-                    'description' => $this->descriptionFor($case),
+                    'label' => $case->label(),
+                    'description' => $case->description(),
                 ],
             );
         }
 
         $seededRoles = array_column(RoleEnum::cases(), 'value');
-        $this->command->info('Roles seeded: ' . implode(', ', $seededRoles));
-    }
-
-    // ── Labels and descriptions ───────────────────────────────────────────
-    // Defined here rather than on the enum itself to keep the enum lean.
-    // If you later add label()/description() methods to RoleEnum,
-    // you can replace these with $case->label() and $case->description().
-
-    private function labelFor(RoleEnum $role): string
-    {
-        return match ($role) {
-            RoleEnum::SUPERADMIN   => 'Super Administrator',
-            RoleEnum::ADMIN        => 'Administrator',
-            RoleEnum::SUPERVISOR   => 'Supervisor',
-            RoleEnum::INVESTIGATOR => 'Investigator',
-        };
-    }
-
-    private function descriptionFor(RoleEnum $role): string
-    {
-        return match ($role) {
-            RoleEnum::SUPERADMIN   => 'Full system access including audit log review and user management.',
-            RoleEnum::ADMIN        => 'Manages staff accounts and system configuration.',
-            RoleEnum::SUPERVISOR   => 'Oversees investigators; can escalate or reassign cases.',
-            RoleEnum::INVESTIGATOR => 'Receives, reviews, and manages assigned cases.',
-        };
+        $this->command?->info('Roles seeded: '.implode(', ', $seededRoles));
     }
 }

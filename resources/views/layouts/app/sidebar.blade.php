@@ -17,28 +17,30 @@
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
-                {{-- Reports group: visible to all authenticated staff --}}
+                {{-- Case handling and staff management, shown per permission --}}
                 @auth
-                <flux:sidebar.group :heading="__('Reports')" class="grid">
-                    <flux:sidebar.item
-                        icon="clipboard-document-list"
-                        href="#"
-                        :current="request()->routeIs('staff.reports.*')"
-                        wire:navigate
-                    >
-                        {{ __('All Reports') }}
-                    </flux:sidebar.item>
+                <flux:sidebar.group :heading="__('Cases')" class="grid">
+                    @can('viewAny', App\Models\Report::class)
+                        <flux:sidebar.item
+                            icon="clipboard-document-list"
+                            :href="route('staff.reports.index')"
+                            :current="request()->routeIs('staff.reports.*')"
+                            wire:navigate
+                        >
+                            {{ auth()->user()->isSupervisor() ? __('All Reports') : __('My Cases') }}
+                        </flux:sidebar.item>
+                    @endcan
 
-                    @if (auth()->user()->isSuperAdmin() || auth()->user()->isAdmin())
+                    @can('viewAny', App\Models\User::class)
                         <flux:sidebar.item
                             icon="users"
-                            href="#"
+                            :href="route('staff.users.index')"
                             :current="request()->routeIs('staff.users.*')"
                             wire:navigate
                         >
-                            {{ __('Users') }}
+                            {{ __('Staff') }}
                         </flux:sidebar.item>
-                    @endif
+                    @endcan
                 </flux:sidebar.group>
                 @endauth
             </flux:sidebar.nav>
@@ -46,7 +48,7 @@
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
+                <flux:sidebar.item icon="folder-git-2" href="https://github.com/dmasikondo/safe-report26" target="_blank">
                     {{ __('Repository') }}
                 </flux:sidebar.item>
 
@@ -55,7 +57,7 @@
                 </flux:sidebar.item>
             </flux:sidebar.nav>
 
-            <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
+            <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->full_name" />
         </flux:sidebar>
 
         <!-- Mobile User Menu -->
@@ -75,12 +77,12 @@
                         <div class="p-0 text-sm font-normal">
                             <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
                                 <flux:avatar
-                                    :name="auth()->user()->name"
+                                    :name="auth()->user()->full_name"
                                     :initials="auth()->user()->initials()"
                                 />
 
                                 <div class="grid flex-1 text-start text-sm leading-tight">
-                                    <flux:heading class="truncate">{{ auth()->user()->name }}</flux:heading>
+                                    <flux:heading class="truncate">{{ auth()->user()->full_name }}</flux:heading>
                                     <flux:text class="truncate">{{ auth()->user()->email }}</flux:text>
                                 </div>
                             </div>

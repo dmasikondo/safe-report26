@@ -2,17 +2,19 @@
 
 namespace App\Policies;
 
+use App\Enums\RoleEnum;
 use App\Models\User;
 
 class UserPolicy
 {
     /**
-     * Superadmins bypass every policy check automatically.
-     * Returning true here short-circuits all methods below for superadmins.
+     * Superadmins bypass most policy checks automatically.
+     * Deactivate and delete still run their own checks so a superadmin
+     * cannot lock themselves out of the system.
      */
-    public function before(User $authUser, string $ability): bool|null
+    public function before(User $authUser, string $ability): ?bool
     {
-        if ($authUser->isSuperAdmin()) {
+        if ($authUser->isSuperAdmin() && ! in_array($ability, ['deactivate', 'delete'], strict: true)) {
             return true;
         }
 
@@ -46,6 +48,26 @@ class UserPolicy
     public function create(User $authUser): bool
     {
         return $authUser->isAdmin();
+    }
+
+    /**
+     * Superadmins may create any role (via before()); admins may only
+     * create supervisors and investigators.
+     */
+    public function createWithRole(User $authUser, RoleEnum $role): bool
+    {
+        return $authUser->canCreateRole($role);
+    }
+
+    /**
+     * Re-send the set-password invitation to an account the user could
+     * have created.
+     */
+    public function resendInvitation(User $authUser, User $targetUser): bool
+    {
+        return $targetUser->roles->contains(
+            fn ($role): bool => $authUser->canCreateRole($role->name)
+        );
     }
 
     /**
