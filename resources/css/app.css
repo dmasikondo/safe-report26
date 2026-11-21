@@ -11,28 +11,85 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-    --color-zinc-50: #fafafa;
-    --color-zinc-100: #f5f5f5;
-    --color-zinc-200: #e5e5e5;
-    --color-zinc-300: #d4d4d4;
-    --color-zinc-400: #a3a3a3;
-    --color-zinc-500: #737373;
-    --color-zinc-600: #525252;
-    --color-zinc-700: #404040;
-    --color-zinc-800: #262626;
-    --color-zinc-900: #171717;
-    --color-zinc-950: #0a0a0a;
+    /*
+     * Brand palette
+     *   Ocean blue  #2596be  → brand-500 (primary)
+     *   Warm gold   #f0c988  → gold-300  (highlight)
+     */
+    --color-brand-50: #eef9fc;
+    --color-brand-100: #d5eff7;
+    --color-brand-200: #afe0ef;
+    --color-brand-300: #78c9e2;
+    --color-brand-400: #45afd2;
+    --color-brand-500: #2596be;
+    --color-brand-600: #1e7ba0;
+    --color-brand-700: #1c6382;
+    --color-brand-800: #1d526b;
+    --color-brand-900: #1c455a;
+    --color-brand-950: #0f2c3c;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
+    --color-gold-50: #fdf8ee;
+    --color-gold-100: #faefd6;
+    --color-gold-200: #f5deac;
+    --color-gold-300: #f0c988;
+    --color-gold-400: #e9ad55;
+    --color-gold-500: #e39532;
+    --color-gold-600: #d27926;
+    --color-gold-700: #ae5c22;
+    --color-gold-800: #8c4923;
+    --color-gold-900: #723d20;
+    --color-gold-950: #3d1e0e;
+
+    /* Existing views and Flux badges use blue/amber: map them to the brand. */
+    --color-blue-50: var(--color-brand-50);
+    --color-blue-100: var(--color-brand-100);
+    --color-blue-200: var(--color-brand-200);
+    --color-blue-300: var(--color-brand-300);
+    --color-blue-400: var(--color-brand-400);
+    --color-blue-500: var(--color-brand-500);
+    --color-blue-600: var(--color-brand-600);
+    --color-blue-700: var(--color-brand-700);
+    --color-blue-800: var(--color-brand-800);
+    --color-blue-900: var(--color-brand-900);
+    --color-blue-950: var(--color-brand-950);
+
+    --color-amber-50: var(--color-gold-50);
+    --color-amber-100: var(--color-gold-100);
+    --color-amber-200: var(--color-gold-200);
+    --color-amber-300: var(--color-gold-300);
+    --color-amber-400: var(--color-gold-400);
+    --color-amber-500: var(--color-gold-500);
+    --color-amber-600: var(--color-gold-600);
+    --color-amber-700: var(--color-gold-700);
+    --color-amber-800: var(--color-gold-800);
+    --color-amber-900: var(--color-gold-900);
+    --color-amber-950: var(--color-gold-950);
+
+    /* Neutrals tinted toward the brand blue (used by Flux for surfaces and text). */
+    --color-zinc-50: #f6f9fb;
+    --color-zinc-100: #edf2f5;
+    --color-zinc-200: #dbe4ea;
+    --color-zinc-300: #c0ced8;
+    --color-zinc-400: #8fa3b1;
+    --color-zinc-500: #647a89;
+    --color-zinc-600: #4b5f6d;
+    --color-zinc-700: #34454f;
+    --color-zinc-800: #1f2d36;
+    --color-zinc-900: #142028;
+    --color-zinc-950: #0a141a;
+
+    /* Light mode: ocean blue buttons, links and focus rings. */
+    --color-accent: var(--color-brand-600);
+    --color-accent-content: var(--color-brand-700);
     --color-accent-foreground: var(--color-white);
 }
 
 @layer theme {
+    /* Dark mode: warm gold accents on deep blue surfaces. */
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent: var(--color-gold-300);
+        --color-accent-content: var(--color-gold-300);
+        --color-accent-foreground: var(--color-brand-950);
     }
 }
 
