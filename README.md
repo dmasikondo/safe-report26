@@ -33,8 +33,9 @@ This system is built for long-term sustainability, leveraging the **TALL Stack**
 * **Database:** [PostgreSQL](https://www.postgresql.org/) (Chosen for strict data integrity and advanced JSONB support for encrypted payloads)
 
 ### Key Cryptographic Features
-* **AES-256-GCM Encryption:** Secures all sensitive reporter data and evidentiary uploads at rest.
-* **SHA-256 Chained-Hash Audit Log:** Each database transaction is cryptographically linked to the previous one, creating a mathematically verifiable, tamper-evident record of all system activity.
+* **Encryption at rest (implemented):** Report text, reporter contact details, staff case notes and evidence files are encrypted with AES-256 (Laravel's AES-256-CBC with an HMAC-SHA256 signature) using a dedicated key, `SAFEREPORT_ENCRYPTION_KEY`, kept separate from `APP_KEY`.
+* **Evidence protection (implemented):** Photos are re-encoded on upload to remove hidden metadata (GPS location, device model, capture time). Every evidence file gets a SHA-256 fingerprint and is stored under a random name; original filenames are never kept.
+* **SHA-256 Chained-Hash Audit Log (planned):** Each record will be cryptographically linked to the previous one, creating a mathematically verifiable, tamper-evident record of system activity. The evidence fingerprints above are the first building block.
 
 ---
 
@@ -50,5 +51,85 @@ This system is built for long-term sustainability, leveraging the **TALL Stack**
 
 1. **Clone the repository**
    ```bash
-   git clone [https://github.com/dmasikondo/safe-report26.git](https://github.com/dmasikondo/safe-report26.git)
+   git clone https://github.com/dmasikondo/safe-report26.git
    cd safe-report26
+   ```
+
+2. **Install dependencies**
+   ```bash
+   composer install
+   npm install
+   ```
+
+3. **Create the environment file and application key**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+
+4. **Generate the report encryption key**
+   ```bash
+   php artisan safereport:key
+   ```
+   This writes `SAFEREPORT_ENCRYPTION_KEY` to `.env`. Report content and evidence files are encrypted with it.
+
+   > ⚠️ **Back this key up somewhere safe, away from the server.** If it is lost, every report and evidence file becomes permanently unreadable. The command refuses to replace a key that is already set.
+
+5. **Configure the database and mail** in `.env`
+   ```dotenv
+   DB_CONNECTION=pgsql
+   DB_HOST=127.0.0.1
+   DB_PORT=5432
+   DB_DATABASE=safereport
+   DB_USERNAME=your_user
+   DB_PASSWORD=your_password
+
+   # Staff invitations are sent by email
+   MAIL_MAILER=smtp
+   MAIL_HOST=smtp.example.com
+   MAIL_PORT=587
+   MAIL_USERNAME=you@example.com
+   MAIL_PASSWORD=your_app_password
+   MAIL_FROM_ADDRESS=you@example.com
+   ```
+
+6. **Run the migrations and seeders**
+   ```bash
+   php artisan migrate --seed
+   ```
+   This creates the tables and seeds the staff roles, the default superadmin account and the institution's departments. The encryption key from step 4 must be set first, because one migration encrypts any existing report data.
+
+   > ⚠️ The default superadmin uses the email in `database/seeders/SuperAdminSeeder.php` and the password `password`. Change both before going live.
+
+7. **Build the frontend and start the app**
+   ```bash
+   npm run build
+   php artisan serve
+   ```
+   For development with hot reloading, queue worker and logs, use `composer run dev` instead.
+
+8. **Run the tests** (optional)
+   ```bash
+   php artisan test
+   ```
+
+### Updating an existing installation
+
+```bash
+git pull
+composer install
+npm install && npm run build
+php artisan migrate
+php artisan db:seed --class=DepartmentSeeder
+```
+The department seeder is safe to run repeatedly; it only adds departments that are missing. Edit `database/seeders/DepartmentSeeder.php` to adapt the list to another institution.
+
+### Moving to another server
+
+When moving an existing database to a new server, **copy the original `SAFEREPORT_ENCRYPTION_KEY`** into the new `.env`. Do **not** run `php artisan safereport:key` there: a newly generated key cannot decrypt data encrypted with the old one. Also copy the contents of `storage/app/private/reports`, where the encrypted evidence files are kept.
+
+### Optional settings
+
+| Variable | Purpose |
+| --- | --- |
+| `SAFEREPORT_ONION_URL` | The Tor hidden-service address, shown on the homepage when set. |
