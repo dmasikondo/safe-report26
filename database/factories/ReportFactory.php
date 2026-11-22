@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\ReportCategoryEnum;
 use App\Enums\ReportStatusEnum;
+use App\Models\Department;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -44,6 +45,11 @@ class ReportFactory extends Factory
     public function assignedTo(User $user): static
     {
         return $this->state(fn () => ['assigned_to' => $user->id]);
+    }
+
+    public function forDepartment(Department $department): static
+    {
+        return $this->state(fn () => ['department_id' => $department->id]);
     }
 
     public function highPriority(): static

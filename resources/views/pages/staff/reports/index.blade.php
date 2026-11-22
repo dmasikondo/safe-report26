@@ -2,7 +2,9 @@
 
 use App\Enums\ReportCategoryEnum;
 use App\Enums\ReportStatusEnum;
+use App\Models\Department;
 use App\Models\Report;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -26,6 +28,9 @@ new #[Title('Reports')] class extends Component {
     #[Url]
     public string $priority = '';
 
+    #[Url]
+    public string $department = '';
+
     /** all | mine | unassigned (supervisors only) */
     #[Url]
     public string $assignment = 'all';
@@ -37,7 +42,7 @@ new #[Title('Reports')] class extends Component {
 
     public function updated(string $property): void
     {
-        if (in_array($property, ['search', 'status', 'category', 'priority', 'assignment'], strict: true)) {
+        if (in_array($property, ['search', 'status', 'category', 'priority', 'department', 'assignment'], strict: true)) {
             $this->resetPage();
         }
     }
@@ -50,20 +55,28 @@ new #[Title('Reports')] class extends Component {
 
         return Report::query()
             ->visibleTo($user)
-            ->with('assignee')
-            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
-                ->where('tracking_token', strtoupper($search))
-                ->orWhere('subject', 'like', "%{$search}%")))
+            ->with(['assignee', 'department'])
+            ->when($search !== '', fn ($query) => $query->where('tracking_token', strtoupper($search)))
             ->when($this->status === 'open', fn ($query) => $query->open())
             ->when($this->status === 'finished', fn ($query) => $query->closed())
             ->when(ReportStatusEnum::tryFrom($this->status), fn ($query, $status) => $query->where('status', $status->value))
             ->when(ReportCategoryEnum::tryFrom($this->category), fn ($query, $category) => $query->forCategory($category))
+            ->when(ctype_digit($this->department), fn ($query) => $query->where('department_id', (int) $this->department))
             ->when(in_array((int) $this->priority, Report::PRIORITIES, strict: true), fn ($query) => $query->where('priority', (int) $this->priority))
             ->when($user->isSupervisor() && $this->assignment === 'mine', fn ($query) => $query->where('assigned_to', $user->id))
             ->when($user->isSupervisor() && $this->assignment === 'unassigned', fn ($query) => $query->unassigned())
             ->orderByDesc('priority')
             ->latest()
             ->paginate(15);
+    }
+
+    /**
+     * @return Collection<int, Department>
+     */
+    #[Computed]
+    public function departments(): Collection
+    {
+        return Department::ordered()->get(['id', 'name']);
     }
 }; ?>
 
@@ -79,8 +92,8 @@ new #[Title('Reports')] class extends Component {
         </flux:text>
     </div>
 
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Subject or tracking token')" class="lg:col-span-2" />
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Tracking token')" />
 
         <flux:select wire:model.live="status">
             <flux:select.option value="open">{{ __('Open cases') }}</flux:select.option>
@@ -98,7 +111,14 @@ new #[Title('Reports')] class extends Component {
             @endforeach
         </flux:select>
 
-        <div class="flex gap-3">
+        <flux:select wire:model.live="department">
+            <flux:select.option value="">{{ __('Any department') }}</flux:select.option>
+            @foreach ($this->departments as $departmentOption)
+                <flux:select.option wire:key="department-{{ $departmentOption->id }}" :value="$departmentOption->id">{{ $departmentOption->name }}</flux:select.option>
+            @endforeach
+        </flux:select>
+
+        <div class="flex gap-3 xl:col-span-2">
             <flux:select wire:model.live="priority">
                 <flux:select.option value="">{{ __('Any priority') }}</flux:select.option>
                 @foreach (App\Models\Report::PRIORITIES as $priorityOption)
@@ -135,7 +155,12 @@ new #[Title('Reports')] class extends Component {
                         </flux:link>
                         <span class="font-mono text-xs text-zinc-500">{{ $report->tracking_token }}</span>
                     </flux:table.cell>
-                    <flux:table.cell>{{ $report->category->label() }}</flux:table.cell>
+                    <flux:table.cell>
+                        {{ $report->category->label() }}
+                        @if ($report->department)
+                            <span class="block text-xs text-zinc-500">{{ $report->department->name }}</span>
+                        @endif
+                    </flux:table.cell>
                     <flux:table.cell>
                         <flux:badge size="sm" :color="$report->status->color()">{{ $report->status->label() }}</flux:badge>
                     </flux:table.cell>

@@ -5,6 +5,7 @@ namespace Tests\Feature\Staff;
 use App\Enums\ReportActivityTypeEnum;
 use App\Enums\ReportStatusEnum;
 use App\Enums\RoleEnum;
+use App\Models\Department;
 use App\Models\Report;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
@@ -75,6 +76,35 @@ class ReportWorkflowTest extends TestCase
         foreach ($reports as $report) {
             $response->assertSee($report->subject);
         }
+    }
+
+    public function test_list_can_be_filtered_by_department(): void
+    {
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        $exams = Department::factory()->create(['name' => 'Exams']);
+        Report::factory()->forDepartment($exams)->create(['subject' => 'Leaked exam papers']);
+        Report::factory()->forDepartment(Department::factory()->create())->create(['subject' => 'Missing canteen stock']);
+
+        $this->actingAs($supervisor);
+
+        Livewire::test('pages::staff.reports.index')
+            ->set('department', (string) $exams->id)
+            ->assertSee('Leaked exam papers')
+            ->assertDontSee('Missing canteen stock');
+    }
+
+    public function test_list_can_be_searched_by_tracking_token(): void
+    {
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        $wanted = Report::factory()->create(['subject' => 'Fuel taken from workshop']);
+        Report::factory()->create(['subject' => 'Hostel rooms sold']);
+
+        $this->actingAs($supervisor);
+
+        Livewire::test('pages::staff.reports.index')
+            ->set('search', strtolower($wanted->tracking_token))
+            ->assertSee('Fuel taken from workshop')
+            ->assertDontSee('Hostel rooms sold');
     }
 
     // ── Assignment ────────────────────────────────────────────────────────
@@ -156,8 +186,8 @@ class ReportWorkflowTest extends TestCase
             'type' => ReportActivityTypeEnum::STATUS_CHANGED->value,
             'from_value' => ReportStatusEnum::RECEIVED->value,
             'to_value' => ReportStatusEnum::UNDER_REVIEW->value,
-            'body' => 'Initial documents verified.',
         ]);
+        $this->assertSame('Initial documents verified.', $report->activities()->first()->body);
     }
 
     public function test_investigator_cannot_close_a_case(): void

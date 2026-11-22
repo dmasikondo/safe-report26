@@ -5,10 +5,39 @@
     <form
         method="POST"
         action="{{ route('report.store') }}"
+        enctype="multipart/form-data"
         x-data="{
             step: {{ $errors->any() ? 2 : 1 }},
             totalSteps: 3,
             selectedCategory: '{{ old('category') }}',
+            categoryLabels: @js(collect(\App\Enums\ReportCategoryEnum::cases())->mapWithKeys(fn ($case) => [$case->value => $case->label()])),
+            files: [],
+            fileError: '',
+            maxFiles: {{ (int) config('safereport.attachments.max_files') }},
+            maxBytes: {{ (int) config('safereport.attachments.max_kilobytes') * 1024 }},
+
+            checkFiles(event) {
+                const chosen = Array.from(event.target.files);
+                this.fileError = '';
+
+                if (chosen.length > this.maxFiles) {
+                    this.fileError = `You can attach at most ${this.maxFiles} files.`;
+                } else if (chosen.some((file) => file.size > this.maxBytes)) {
+                    this.fileError = 'Each file must be 2 MB or smaller.';
+                }
+
+                if (this.fileError) {
+                    event.target.value = '';
+                    this.files = [];
+                    return;
+                }
+
+                this.files = chosen.map((file) => ({ name: file.name, size: file.size }));
+            },
+            departmentName() {
+                const select = document.getElementById('department_id');
+                return select && select.value ? select.options[select.selectedIndex].text.trim() : 'Not specified';
+            },
 
             next() {
                 if (this.validate()) this.step++;
@@ -117,7 +146,49 @@
                     <x-report.field-error name="body" />
                 </div>
 
-                {{-- Optional fields --}}
+                {{-- Where it happened --}}
+                <div class="mb-5 grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="department_id" class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            Department
+                        </label>
+                        <select
+                            id="department_id"
+                            name="department_id"
+                            class="w-full rounded-lg border @error('department_id') border-red-400 dark:border-red-600 @else border-zinc-300 dark:border-zinc-700 @enderror bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
+                        >
+                            <option value="">Select a department (optional)</option>
+                            @foreach ($departments as $department)
+                                <option value="{{ $department->id }}" @selected((string) old('department_id') === (string) $department->id)>
+                                    {{ $department->name }}
+                                </option>
+                            @endforeach
+                            <option value="">Other / not listed</option>
+                        </select>
+                        <x-report.field-error name="department_id" />
+                    </div>
+                    <div>
+                        <label for="incident_location" class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            Specific place
+                            <span class="text-xs font-normal text-zinc-400">(optional)</span>
+                        </label>
+                        <input
+                            id="incident_location"
+                            name="incident_location"
+                            type="text"
+                            maxlength="200"
+                            value="{{ old('incident_location') }}"
+                            placeholder="e.g. Block C, Room 4"
+                            class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
+                        />
+                        <x-report.field-error name="incident_location" />
+                    </div>
+                    <p class="flex items-start gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 sm:col-span-2">
+                        <flux:icon.information-circle variant="micro" class="mt-px size-4 shrink-0" />
+                        Share only what is needed. In a small department, a few extra details can identify you.
+                    </p>
+                </div>
+
                 <div class="mb-5 grid gap-4 sm:grid-cols-2">
                     <div>
                         <label for="incident_date" class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -127,41 +198,67 @@
                             id="incident_date"
                             name="incident_date"
                             type="text"
+                            maxlength="100"
                             value="{{ old('incident_date') }}"
-                            placeholder="e.g. March 2026 or Q1 2026"
+                            placeholder="e.g. March 2026 or last semester"
                             class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
                         />
                         <x-report.field-error name="incident_date" />
                     </div>
                     <div>
-                        <label for="incident_location" class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            Location
+                        <label for="organisation_involved" class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                            Person or office involved
                         </label>
                         <input
-                            id="incident_location"
-                            name="incident_location"
+                            id="organisation_involved"
+                            name="organisation_involved"
                             type="text"
-                            value="{{ old('incident_location') }}"
-                            placeholder="City, district or department"
+                            maxlength="200"
+                            value="{{ old('organisation_involved') }}"
+                            placeholder="e.g. a job title, office or company"
                             class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
                         />
-                        <x-report.field-error name="incident_location" />
+                        <x-report.field-error name="organisation_involved" />
                     </div>
                 </div>
 
+                {{-- Evidence attachments --}}
                 <div class="mb-5">
-                    <label for="organisation_involved" class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                        Organisation or entity involved
+                    <label for="attachments" class="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        Evidence
+                        <span class="text-xs font-normal text-zinc-400">(optional — up to {{ config('safereport.attachments.max_files') }} files, 2 MB each)</span>
                     </label>
                     <input
-                        id="organisation_involved"
-                        name="organisation_involved"
-                        type="text"
-                        value="{{ old('organisation_involved') }}"
-                        placeholder="Ministry, company, department name…"
-                        class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3.5 py-2.5 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition"
+                        id="attachments"
+                        name="attachments[]"
+                        type="file"
+                        multiple
+                        accept="image/jpeg,image/png,image/webp,application/pdf"
+                        x-ref="attachments"
+                        @change="checkFiles($event)"
+                        class="block w-full rounded-lg border @if ($errors->has('attachments') || $errors->has('attachments.*')) border-red-400 dark:border-red-600 @else border-zinc-300 dark:border-zinc-700 @endif bg-white dark:bg-zinc-800 text-sm text-zinc-700 dark:text-zinc-300 file:mr-3 file:border-0 file:bg-brand-50 file:px-3.5 file:py-2.5 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-950 dark:file:text-brand-200"
                     />
-                    <x-report.field-error name="organisation_involved" />
+                    <p x-show="fileError" x-text="fileError" class="mt-1.5 text-xs text-red-600 dark:text-red-400" role="alert"></p>
+                    <ul x-show="files.length" class="mt-2 space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+                        <template x-for="file in files" :key="file.name">
+                            <li class="flex items-center gap-1.5">
+                                <flux:icon.paper-clip variant="micro" class="size-3.5" />
+                                <span x-text="file.name + ' (' + (file.size / 1024 / 1024).toFixed(2) + ' MB)'"></span>
+                            </li>
+                        </template>
+                    </ul>
+                    <div class="mt-2 space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        <p>Photos (JPG, PNG, WEBP) or PDF documents. Files are encrypted as soon as they arrive.</p>
+                        <p>Hidden photo details such as GPS location, phone model and the time taken are removed automatically.</p>
+                        <p class="text-amber-700 dark:text-amber-400">PDFs can contain the author's name or computer account. Check the document properties before attaching one.</p>
+                    </div>
+                    <x-report.field-error name="attachments" />
+                    @foreach ($errors->get('attachments.*') as $messages)
+                        <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ $messages[0] }}</p>
+                    @endforeach
+                    @if ($errors->any())
+                        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">For your security, attached files are not kept when the form is returned with a problem — please attach them again.</p>
+                    @endif
                 </div>
 
                 <div class="mb-2">
@@ -208,18 +305,28 @@
                 <div class="mb-6 divide-y divide-zinc-100 dark:divide-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 overflow-hidden">
                     <div class="flex items-start gap-3 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50">
                         <span class="mt-0.5 text-xs font-semibold uppercase tracking-wider text-zinc-400 w-28 shrink-0">Category</span>
-                        <span class="text-sm text-zinc-800 dark:text-zinc-200 font-medium capitalize"
-                              x-text="selectedCategory ? selectedCategory.replace(/_/g, ' ') : '—'"></span>
+                        <span class="text-sm text-zinc-800 dark:text-zinc-200 font-medium"
+                              x-text="selectedCategory ? (categoryLabels[selectedCategory] ?? selectedCategory) : '—'"></span>
                     </div>
                     <div class="flex items-start gap-3 px-4 py-3">
-                        <span class="mt-0.5 text-xs font-semibold uppercase tracking-wider text-zinc-400 w-28 shrink-0">Subject</span>
+                        <span class="mt-0.5 text-xs font-semibold uppercase tracking-wider text-zinc-400 w-28 shrink-0">Department</span>
                         <span class="text-sm text-zinc-800 dark:text-zinc-200"
-                              x-text="document.getElementById('subject')?.value || '—'"></span>
+                              x-text="step === 3 ? departmentName() : ''"></span>
                     </div>
                     <div class="flex items-start gap-3 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50">
+                        <span class="mt-0.5 text-xs font-semibold uppercase tracking-wider text-zinc-400 w-28 shrink-0">Subject</span>
+                        <span class="text-sm text-zinc-800 dark:text-zinc-200"
+                              x-text="step === 3 ? (document.getElementById('subject')?.value || '—') : ''"></span>
+                    </div>
+                    <div class="flex items-start gap-3 px-4 py-3">
                         <span class="mt-0.5 text-xs font-semibold uppercase tracking-wider text-zinc-400 w-28 shrink-0">Description</span>
                         <span class="text-sm text-zinc-800 dark:text-zinc-200 whitespace-pre-wrap break-words line-clamp-6"
-                              x-text="document.getElementById('body')?.value || '—'"></span>
+                              x-text="step === 3 ? (document.getElementById('body')?.value || '—') : ''"></span>
+                    </div>
+                    <div class="flex items-start gap-3 px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50">
+                        <span class="mt-0.5 text-xs font-semibold uppercase tracking-wider text-zinc-400 w-28 shrink-0">Evidence</span>
+                        <span class="text-sm text-zinc-800 dark:text-zinc-200"
+                              x-text="files.length ? files.length + (files.length === 1 ? ' file' : ' files') + ' attached' : 'None'"></span>
                     </div>
                 </div>
 

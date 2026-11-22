@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers\Report;
 
+use App\Actions\Reports\StoreReportAttachment;
+use App\Enums\ReportCategoryEnum;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreReportRequest;
+use App\Models\Department;
 use App\Models\Report;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Throwable;
 
 class ReportController extends Controller
 {
@@ -16,7 +22,9 @@ class ReportController extends Controller
      */
     public function create(): View
     {
-        return view('report.create');
+        return view('report.create', [
+            'departments' => Department::ordered()->get(['id', 'name']),
+        ]);
     }
 
     /**
@@ -25,9 +33,29 @@ class ReportController extends Controller
      * Tracking token is auto-generated in Report::booted().
      * No user identity is attached.
      */
-    public function store(StoreReportRequest $request): RedirectResponse
+    public function store(StoreReportRequest $request, StoreReportAttachment $storeAttachment): RedirectResponse
     {
-        $report = Report::create($request->validated());
+        $category = ReportCategoryEnum::from($request->validated('category'));
+        $storedPaths = [];
+
+        try {
+            $report = DB::transaction(function () use ($request, $category, $storeAttachment, &$storedPaths): Report {
+                $report = Report::create([
+                    ...$request->safe()->except('attachments'),
+                    'priority' => $category->defaultPriority(),
+                ]);
+
+                foreach ($request->file('attachments', []) as $file) {
+                    $storedPaths[] = $storeAttachment->handle($report, $file)->path;
+                }
+
+                return $report;
+            });
+        } catch (Throwable $exception) {
+            Storage::disk(config('safereport.attachments.disk'))->delete($storedPaths);
+
+            throw $exception;
+        }
 
         return redirect()
             ->route('report.submitted', ['token' => $report->tracking_token]);
@@ -63,7 +91,7 @@ class ReportController extends Controller
             'token' => ['required', 'string'],
         ]);
 
-        $token  = strtoupper(trim($request->input('token')));
+        $token = strtoupper(trim($request->input('token')));
         $report = Report::where('tracking_token', $token)->first();
 
         if (! $report) {

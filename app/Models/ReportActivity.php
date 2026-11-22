@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedWithReportKey;
 use App\Enums\ReportActivityTypeEnum;
 use Database\Factories\ReportActivityFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,6 +27,7 @@ class ReportActivity extends Model
     {
         return [
             'type' => ReportActivityTypeEnum::class,
+            'body' => EncryptedWithReportKey::class,
         ];
     }
 

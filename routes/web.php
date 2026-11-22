@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Report\ReportController;
+use App\Http\Controllers\Staff\ReportAttachmentController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -22,6 +23,9 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
         // Case handling — supervisors see all cases, investigators their own
         Route::livewire('reports', 'pages::staff.reports.index')->name('reports.index');
         Route::livewire('reports/{report}', 'pages::staff.reports.show')->name('reports.show');
+        Route::get('reports/{report}/attachments/{attachment}', [ReportAttachmentController::class, 'show'])
+            ->scopeBindings()
+            ->name('reports.attachments.show');
 
         // Staff account management — superadmins and admins
         Route::livewire('users', 'pages::staff.users.index')->name('users.index');

@@ -33,7 +33,7 @@
             ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400'
             : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/30 group-hover:text-blue-500'"
     >
-        <flux:icon.{{ $category->icon() }} class="size-6" />
+        <flux:icon :name="$category->icon()" class="size-6" />
     </span>
 
     {{-- Category label --}}
@@ -44,6 +44,11 @@
             : 'text-zinc-700 dark:text-zinc-300'"
     >
         {{ $category->label() }}
+    </span>
+
+    {{-- Plain-language hint --}}
+    <span class="text-xs leading-snug text-zinc-500 dark:text-zinc-400">
+        {{ $category->description() }}
     </span>
 
     {{-- Selected checkmark --}}

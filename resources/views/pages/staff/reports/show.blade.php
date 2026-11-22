@@ -226,11 +226,15 @@ new #[Title('Report')] class extends Component {
                         <dd>{{ $report->incident_date ?: '—' }}</dd>
                     </div>
                     <div>
-                        <dt class="text-zinc-500">{{ __('Location') }}</dt>
-                        <dd>{{ $report->incident_location ?: '—' }}</dd>
+                        <dt class="text-zinc-500">{{ __('Department') }}</dt>
+                        <dd>{{ $report->department?->name ?? __('Not specified') }}</dd>
                     </div>
                     <div>
-                        <dt class="text-zinc-500">{{ __('Organisation involved') }}</dt>
+                        <dt class="text-zinc-500">{{ __('Specific place') }}</dt>
+                        <dd>{{ $report->incident_location ?: '—' }}</dd>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <dt class="text-zinc-500">{{ __('Person or office involved') }}</dt>
                         <dd>{{ $report->organisation_involved ?: '—' }}</dd>
                     </div>
                     <div class="sm:col-span-2">
@@ -242,6 +246,38 @@ new #[Title('Report')] class extends Component {
                 <flux:separator class="my-4" />
 
                 <div class="whitespace-pre-line text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">{{ $report->body }}</div>
+            </flux:card>
+
+            <flux:card>
+                <flux:heading size="lg">{{ __('Evidence') }}</flux:heading>
+                <flux:text class="mt-1">{{ __('Files are stored encrypted. Photo metadata was removed on upload.') }}</flux:text>
+
+                @if ($report->attachments->isEmpty())
+                    <flux:text class="mt-4">{{ __('No files were attached.') }}</flux:text>
+                @else
+                    <ul class="mt-4 divide-y divide-zinc-200 dark:divide-zinc-700">
+                        @foreach ($report->attachments as $attachment)
+                            <li wire:key="attachment-{{ $attachment->id }}" class="flex flex-wrap items-center justify-between gap-3 py-3">
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <flux:icon :name="$attachment->isImage() ? 'photo' : 'document-text'" class="size-5 shrink-0 text-zinc-400" />
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-medium">{{ __('Evidence :number', ['number' => $loop->iteration]) }}</p>
+                                        <p class="font-mono text-xs text-zinc-500" title="{{ __('SHA-256 fingerprint') }}">
+                                            {{ strtoupper($attachment->extension()) }} · {{ $attachment->humanSize() }} · {{ substr($attachment->sha256, 0, 12) }}…
+                                        </p>
+                                    </div>
+                                </div>
+                                <flux:button
+                                    size="sm"
+                                    icon="arrow-down-tray"
+                                    :href="route('staff.reports.attachments.show', [$report, $attachment])"
+                                >
+                                    {{ __('Download') }}
+                                </flux:button>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
             </flux:card>
 
             <flux:card>

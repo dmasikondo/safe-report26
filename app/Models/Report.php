@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedWithReportKey;
 use App\Enums\ReportActivityTypeEnum;
 use App\Enums\ReportCategoryEnum;
 use App\Enums\ReportStatusEnum;
@@ -38,6 +39,7 @@ class Report extends Model
     protected $fillable = [
         'tracking_token',
         'category',
+        'department_id',
         'status',
         'subject',
         'body',
@@ -54,6 +56,14 @@ class Report extends Model
     {
         return [
             'category' => ReportCategoryEnum::class,
+            'department_id' => 'integer',
+            'subject' => EncryptedWithReportKey::class,
+            'body' => EncryptedWithReportKey::class,
+            'incident_date' => EncryptedWithReportKey::class,
+            'incident_location' => EncryptedWithReportKey::class,
+            'organisation_involved' => EncryptedWithReportKey::class,
+            'contact_hint' => EncryptedWithReportKey::class,
+            'internal_notes' => EncryptedWithReportKey::class,
             'status' => ReportStatusEnum::class,
             'priority' => 'integer',
             'assigned_to' => 'integer',
@@ -76,6 +86,16 @@ class Report extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(ReportAttachment::class)->orderBy('id');
     }
 
     public function activities(): HasMany
