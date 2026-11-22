@@ -21,6 +21,24 @@ class HomepageTest extends TestCase
             ->assertSee('action="'.route('report.track.submit').'"', escape: false);
     }
 
+    public function test_homepage_shows_the_configured_onion_address(): void
+    {
+        config(['safereport.onion_url' => 'http://safereportexampleonionaddress.onion']);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('http://safereportexampleonionaddress.onion');
+    }
+
+    public function test_homepage_falls_back_to_generic_tor_instructions_without_an_onion_address(): void
+    {
+        config(['safereport.onion_url' => null]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('using the address published by your organisation');
+    }
+
     public function test_quick_track_form_shows_the_status_for_a_valid_token(): void
     {
         $report = Report::factory()->create();

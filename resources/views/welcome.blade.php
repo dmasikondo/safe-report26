@@ -181,11 +181,29 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300">
-                            <flux:icon.user-group variant="mini" class="size-5" />
+                            <flux:icon.eye-slash variant="mini" class="size-5" />
                         </span>
                         <div>
-                            <p class="text-sm font-semibold text-zinc-900 dark:text-white">Handled by authorised staff</p>
-                            <p class="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Investigators only see the cases assigned to them.</p>
+                            <p class="text-sm font-semibold text-zinc-900 dark:text-white">Your connection is not traced</p>
+                            <p class="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">We do not record your internet address or device details, and you can reach us through the Tor Browser.</p>
+                        </div>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gold-100 text-gold-800 dark:bg-gold-900/40 dark:text-gold-300">
+                            <flux:icon.lock-closed variant="mini" class="size-5" />
+                        </span>
+                        <div>
+                            <p class="text-sm font-semibold text-zinc-900 dark:text-white">Locked with strong encryption</p>
+                            <p class="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Your report is scrambled before it is saved, so only authorised investigators can read it.</p>
+                        </div>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300">
+                            <flux:icon.link variant="mini" class="size-5" />
+                        </span>
+                        <div>
+                            <p class="text-sm font-semibold text-zinc-900 dark:text-white">Records that cannot be secretly changed</p>
+                            <p class="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">A blockchain-inspired chain of digital seals shows if anyone alters or deletes a record.</p>
                         </div>
                     </li>
                     <li class="flex gap-3">
@@ -274,6 +292,120 @@
         </div>
     </section>
 
+    {{-- ── Security, explained in plain language ────────────────────────── --}}
+    <section aria-labelledby="security-heading" class="border-t border-zinc-200 bg-white py-16 dark:border-zinc-800 dark:bg-zinc-900 sm:py-20">
+        <div class="mx-auto max-w-6xl px-4 sm:px-6">
+            <div class="max-w-2xl">
+                <p class="text-sm font-semibold uppercase tracking-wider text-gold-700 dark:text-gold-300">How we keep you safe</p>
+                <h2 id="security-heading" class="mt-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">The protections behind every report</h2>
+                <p class="mt-3 text-zinc-600 dark:text-zinc-400">
+                    You do not need to understand technology to use SafeReport safely. Here is what each
+                    protection does, explained in everyday terms.
+                </p>
+            </div>
+
+            @php
+                $protections = [
+                    [
+                        'icon' => 'globe-alt',
+                        'title' => 'Tor Browser support',
+                        'what' => 'SafeReport can be reached through the Tor Browser, a free web browser built to hide where you are connecting from.',
+                        'plain' => 'Think of posting a letter through several post offices, where each one only knows the office before and after it. By the time your report reaches us, nobody along the way, including us, can tell where it came from.',
+                    ],
+                    [
+                        'icon' => 'finger-print',
+                        'title' => 'No IP address or fingerprint records',
+                        'what' => 'We do not store your IP address or a "fingerprint" of your browser.',
+                        'plain' => 'An IP address is like the return address of your internet connection. A browser fingerprint is a collection of small details, such as your screen size and settings, that can identify a device. We do not write down either, so there is no trail leading back to you.',
+                    ],
+                    [
+                        'icon' => 'lock-closed',
+                        'title' => 'Military-grade encryption',
+                        'what' => 'Your report and your optional contact method are encrypted with AES-256-GCM before they are saved.',
+                        'plain' => 'Encryption scrambles your words into meaningless characters, like locking them in a safe with a very long combination. Even if someone stole our database, they would see only gibberish. The "GCM" part also acts like a tamper seal: if anyone changes the scrambled data, it will refuse to unlock.',
+                    ],
+                    [
+                        'icon' => 'link',
+                        'title' => 'Blockchain-inspired integrity',
+                        'what' => 'Every action on a report is recorded in a chained, tamper-evident log protected by SHA-256 digital fingerprints.',
+                        'plain' => 'Each entry gets a unique digital seal that is calculated from its own contents and the seal of the entry before it, like links in a chain. If anyone secretly changes or deletes an old entry, its seal no longer matches and every link after it breaks, so tampering is immediately visible. It borrows this idea from blockchain, but it has nothing to do with cryptocurrency.',
+                    ],
+                    [
+                        'icon' => 'code-bracket',
+                        'title' => 'Open source',
+                        'what' => 'The complete source code of SafeReport is public.',
+                        'plain' => 'Anyone, including independent security experts, can inspect exactly how the platform works and confirm that it does what it says. There is no hidden "black box" you are asked to trust blindly.',
+                    ],
+                    [
+                        'icon' => 'user-group',
+                        'title' => 'Strict staff access',
+                        'what' => 'Only authorised staff can open reports, and investigators only see the cases assigned to them.',
+                        'plain' => 'It works like a records room where each investigator is given keys only to their own files. Every time someone changes the status of your report, assigns it or adds a note, it is recorded in the chained log above.',
+                    ],
+                ];
+            @endphp
+
+            <div class="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                @foreach ($protections as $protection)
+                    <article class="flex flex-col rounded-2xl border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-950/40">
+                        <span class="flex size-11 items-center justify-center rounded-xl {{ $loop->odd ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/60 dark:text-brand-300' : 'bg-gold-100 text-gold-800 dark:bg-gold-900/40 dark:text-gold-300' }}">
+                            <flux:icon :name="$protection['icon']" class="size-6" aria-hidden="true" />
+                        </span>
+                        <h3 class="mt-4 font-semibold text-zinc-900 dark:text-white">{{ $protection['title'] }}</h3>
+                        <p class="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{{ $protection['what'] }}</p>
+                        <div class="mt-4 rounded-xl bg-white p-4 text-sm leading-relaxed text-zinc-600 ring-1 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:ring-zinc-800">
+                            <p class="mb-1 text-xs font-semibold uppercase tracking-wider text-brand-700 dark:text-brand-300">In plain terms</p>
+                            {{ $protection['plain'] }}
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+
+            {{-- How to use Tor --}}
+            <div class="mt-12 grid gap-8 rounded-2xl bg-brand-50 p-6 ring-1 ring-brand-100 dark:bg-brand-950/40 dark:ring-brand-900 sm:p-8 lg:grid-cols-5">
+                <div class="lg:col-span-2">
+                    <h3 class="flex items-center gap-2 text-xl font-bold text-brand-900 dark:text-brand-100">
+                        <flux:icon.globe-alt class="size-6 text-brand-600 dark:text-brand-400" aria-hidden="true" />
+                        Reporting through Tor, step by step
+                    </h3>
+                    <p class="mt-2 text-sm text-brand-900/80 dark:text-brand-200">
+                        Using Tor is optional, but it gives you the strongest protection, especially if you are
+                        worried that your internet connection is being watched.
+                    </p>
+                </div>
+                <ol class="space-y-4 text-sm text-brand-950 dark:text-brand-100 lg:col-span-3" role="list">
+                    <li class="flex gap-3">
+                        <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white" aria-hidden="true">1</span>
+                        <span>
+                            Download the free Tor Browser from its official website,
+                            <a href="https://www.torproject.org/download/" class="font-semibold text-brand-700 underline underline-offset-2 dark:text-brand-300" rel="noopener noreferrer" target="_blank">torproject.org</a>.
+                            Only download it from there.
+                        </span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white" aria-hidden="true">2</span>
+                        <span>Open the Tor Browser and click <strong>Connect</strong>. It may take a moment to start.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white" aria-hidden="true">3</span>
+                        <span>
+                            @if (filled(config('safereport.onion_url')))
+                                Type our private Tor address into the Tor Browser:
+                                <code class="mt-1 block break-all rounded-lg bg-white px-3 py-2 font-mono text-xs text-brand-900 ring-1 ring-brand-200 dark:bg-brand-950 dark:text-brand-100 dark:ring-brand-800">{{ config('safereport.onion_url') }}</code>
+                            @else
+                                Visit SafeReport in the Tor Browser using the address published by your organisation.
+                            @endif
+                        </span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white" aria-hidden="true">4</span>
+                        <span>Submit or track your report exactly as you would in any other browser, then close the Tor Browser when you are done.</span>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </section>
+
     {{-- ── Privacy ──────────────────────────────────────────────────────── --}}
     <section aria-labelledby="privacy-heading" class="bg-brand-950 py-16 text-white sm:py-20">
         <div class="mx-auto max-w-6xl px-4 sm:px-6">
@@ -294,6 +426,9 @@
                     </h3>
                     <ul class="mt-4 space-y-3 text-sm text-brand-100" role="list">
                         <li class="flex gap-2"><flux:icon.check variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Asks for no account, sign-in or name to submit or track a report.</li>
+                        <li class="flex gap-2"><flux:icon.check variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Does not record your IP address or browser fingerprint, and works through the Tor Browser.</li>
+                        <li class="flex gap-2"><flux:icon.check variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Encrypts your report and your optional contact method before storing them.</li>
+                        <li class="flex gap-2"><flux:icon.check variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Seals every record in a tamper-evident chain, so any later change or deletion shows up.</li>
                         <li class="flex gap-2"><flux:icon.check variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Does not link your tracking token to your identity. Only the token holder can view a report's status.</li>
                         <li class="flex gap-2"><flux:icon.check variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Restricts reports to authorised staff, and investigators only see the cases assigned to them.</li>
                         <li class="flex gap-2"><flux:icon.check variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Keeps staff notes about your case internal. They are never shown on the tracking page.</li>
@@ -307,7 +442,7 @@
                     </h3>
                     <ul class="mt-4 space-y-3 text-sm text-brand-100" role="list">
                         <li class="flex gap-2"><flux:icon.arrow-right variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Leave out details only you would know, such as your name, job title or exact role in events.</li>
-                        <li class="flex gap-2"><flux:icon.arrow-right variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Use a personal device on a network that is not your employer's, such as mobile data instead of office Wi-Fi.</li>
+                        <li class="flex gap-2"><flux:icon.arrow-right variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Use the Tor Browser on a personal device, and avoid your employer's network or computers.</li>
                         <li class="flex gap-2"><flux:icon.arrow-right variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />The contact method is optional. If you give one, use an account that is not linked to your real name.</li>
                         <li class="flex gap-2"><flux:icon.arrow-right variant="micro" class="mt-0.5 size-4 shrink-0 text-gold-300" aria-hidden="true" />Keep your tracking token private. Anyone who has it can see your report's status.</li>
                     </ul>
