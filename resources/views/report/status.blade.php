@@ -1,26 +1,6 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Report Status — SafeReport</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased">
+<x-layouts::public title="Report status">
 
-<header class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-    <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-        <a href="{{ route('home') }}" class="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
-            <flux:icon.shield-check class="size-5 text-blue-600" />
-            SafeReport
-        </a>
-        <a href="{{ route('report.track') }}" class="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
-            ← Track another report
-        </a>
-    </div>
-</header>
-
-<main class="mx-auto max-w-2xl px-4 py-10">
+<div class="mx-auto max-w-2xl px-4 py-10">
 
     {{-- Header --}}
     <div class="mb-8">
@@ -133,7 +113,6 @@
         </flux:button>
     </div>
 
-</main>
+</div>
 
-</body>
-</html>
+</x-layouts::public>

@@ -1,58 +1,7 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="SafeReport lets you report corruption, fraud and other wrongdoing without creating an account or giving your name, and follow your report's progress with a private tracking token." />
-    <title>SafeReport — Anonymous Whistleblowing</title>
-    <link rel="icon" href="/favicon.ico" sizes="any">
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    @fonts
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="min-h-screen bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
-
-<a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-800 focus:shadow-lg">
-    Skip to main content
-</a>
-
-{{-- ── Header ──────────────────────────────────────────────────────────── --}}
-<header class="sticky top-0 z-40 border-b border-zinc-200/80 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90">
-    <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <a href="{{ route('home') }}" class="flex items-center gap-2 rounded-md font-semibold text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-500 dark:text-white">
-            <span class="flex size-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-                <flux:icon.shield-check variant="mini" class="size-5" />
-            </span>
-            SafeReport
-        </a>
-
-        <nav aria-label="Main" class="flex items-center gap-1 sm:gap-2">
-            <a href="{{ route('report.track') }}" class="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition hover:bg-brand-50 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-500 sm:inline-flex dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white">
-                <flux:icon.magnifying-glass variant="micro" class="size-4" />
-                Track a report
-            </a>
-            <a href="{{ route('login') }}" class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-zinc-600 transition hover:bg-brand-50 hover:text-brand-800 focus-visible:outline-2 focus-visible:outline-brand-500 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white">
-                <flux:icon.lock-closed variant="micro" class="size-4" />
-                Staff login
-            </a>
-            <a href="{{ route('report.create') }}" class="hidden items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 md:inline-flex">
-                <flux:icon.document-plus variant="micro" class="size-4" />
-                Submit a report
-            </a>
-        </nav>
-    </div>
-</header>
-
-<main id="main">
+<x-layouts::public>
 
     {{-- ── Hero ─────────────────────────────────────────────────────────── --}}
-    <section aria-labelledby="hero-heading" class="relative overflow-hidden">
-        {{-- Soft brand glow, decorative only --}}
-        <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
-            <div class="absolute -left-32 -top-32 size-[28rem] rounded-full bg-brand-200/50 blur-3xl dark:bg-brand-900/40"></div>
-            <div class="absolute -right-24 top-40 size-[22rem] rounded-full bg-gold-200/60 blur-3xl dark:bg-gold-900/20"></div>
-        </div>
+    <section aria-labelledby="hero-heading">
 
         <div class="mx-auto grid max-w-6xl items-start gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-8 lg:py-20">
 
@@ -461,23 +410,4 @@
             </div>
         </div>
     </section>
-</main>
-
-{{-- ── Footer ──────────────────────────────────────────────────────────── --}}
-<footer class="bg-zinc-950 py-8 text-sm text-zinc-400">
-    <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p class="flex items-center gap-2">
-            <flux:icon.shield-check variant="mini" class="size-4 text-brand-400" aria-hidden="true" />
-            SafeReport, open-source whistleblowing infrastructure
-        </p>
-        <nav aria-label="Footer" class="flex flex-wrap gap-x-5 gap-y-2">
-            <a href="{{ route('report.create') }}" class="hover:text-white">Submit a report</a>
-            <a href="{{ route('report.track') }}" class="hover:text-white">Track a report</a>
-            <a href="{{ route('login') }}" class="hover:text-white">Staff login</a>
-            <a href="https://github.com/dmasikondo/safe-report26" class="hover:text-white" rel="noopener" target="_blank">Source code</a>
-        </nav>
-    </div>
-</footer>
-
-</body>
-</html>
+</x-layouts::public>

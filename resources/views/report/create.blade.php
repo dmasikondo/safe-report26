@@ -1,28 +1,7 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Submit a Report — SafeReport</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased">
-
-{{-- ── Page header ── --}}
-<header class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-    <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-        <a href="{{ route('home') }}" class="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
-            <flux:icon.shield-check class="size-5 text-blue-600" />
-            SafeReport
-        </a>
-        <a href="{{ route('report.track') }}" class="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
-            Track my report →
-        </a>
-    </div>
-</header>
+<x-layouts::public title="Submit a report">
 
 {{-- ── Wizard ── --}}
-<main class="mx-auto max-w-3xl px-4 py-10">
+<div class="mx-auto max-w-3xl px-4 py-10">
     <form
         method="POST"
         action="{{ route('report.store') }}"
@@ -87,9 +66,9 @@
                         variant="primary"
                         @click="next()"
                         class="px-6"
+                        icon:trailing="arrow-right"
                     >
                         Continue
-                        <flux:icon.arrow-right class="ml-1 size-4" />
                     </flux:button>
                 </div>
             </div>
@@ -205,13 +184,11 @@
                 </div>
 
                 <div class="mt-8 flex justify-between gap-3">
-                    <flux:button type="button" variant="ghost" @click="prev()">
-                        <flux:icon.arrow-left class="mr-1 size-4" />
+                    <flux:button type="button" variant="ghost" @click="prev()" icon="arrow-left">
                         Back
                     </flux:button>
-                    <flux:button type="button" variant="primary" @click="next()" class="px-6">
+                    <flux:button type="button" variant="primary" @click="next()" class="px-6" icon:trailing="arrow-right">
                         Review report
-                        <flux:icon.arrow-right class="ml-1 size-4" />
                     </flux:button>
                 </div>
             </div>
@@ -258,12 +235,10 @@
                 </div>
 
                 <div class="flex justify-between gap-3">
-                    <flux:button type="button" variant="ghost" @click="prev()">
-                        <flux:icon.arrow-left class="mr-1 size-4" />
+                    <flux:button type="button" variant="ghost" @click="prev()" icon="arrow-left">
                         Back
                     </flux:button>
-                    <flux:button type="submit" variant="primary" class="px-6">
-                        <flux:icon.paper-airplane class="mr-1.5 size-4" />
+                    <flux:button type="submit" variant="primary" class="px-6" icon="paper-airplane">
                         Submit report
                     </flux:button>
                 </div>
@@ -278,7 +253,6 @@
         </p>
 
     </form>
-</main>
+</div>
 
-</body>
-</html>
+</x-layouts::public>

@@ -1,26 +1,6 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Track a Report — SafeReport</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-<body class="min-h-screen bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased">
+<x-layouts::public title="Track a report">
 
-<header class="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-    <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-        <a href="{{ route('home') }}" class="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
-            <flux:icon.shield-check class="size-5 text-blue-600" />
-            SafeReport
-        </a>
-        <a href="{{ route('report.create') }}" class="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
-            Submit a report →
-        </a>
-    </div>
-</header>
-
-<main class="mx-auto max-w-lg px-4 py-16">
+<div class="mx-auto max-w-lg px-4 py-16">
 
     <div class="mb-8 text-center">
         <div class="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40">
@@ -61,8 +41,7 @@
                 </p>
             </div>
 
-            <flux:button type="submit" variant="primary" class="w-full">
-                <flux:icon.magnifying-glass class="mr-1.5 size-4" />
+            <flux:button type="submit" variant="primary" class="w-full" icon="magnifying-glass">
                 Look up report
             </flux:button>
         </form>
@@ -76,7 +55,6 @@
         </p>
     </div>
 
-</main>
+</div>
 
-</body>
-</html>
+</x-layouts::public>
