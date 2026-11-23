@@ -16,8 +16,8 @@ class ReportTrackingTest extends TestCase
     {
         return Report::create(array_merge([
             'category' => ReportCategoryEnum::FRAUD->value,
-            'subject'  => 'Fraudulent procurement at state hospital',
-            'body'     => str_repeat('Supporting detail for the report. ', 5),
+            'subject' => 'Fraudulent procurement at state hospital',
+            'body' => str_repeat('Supporting detail for the report. ', 5),
         ], $attrs));
     }
 
@@ -45,7 +45,7 @@ class ReportTrackingTest extends TestCase
     public function test_token_lookup_is_case_insensitive(): void
     {
         $report = $this->makeReport();
-        $lower  = strtolower($report->tracking_token);
+        $lower = strtolower($report->tracking_token);
 
         $this->post(route('report.track.submit'), ['token' => $lower])
             ->assertOk()
@@ -71,9 +71,11 @@ class ReportTrackingTest extends TestCase
     {
         $report = $this->makeReport();
 
-        $this->get(route('report.submitted', $report->tracking_token))
+        $this->post(route('report.track.submit'), ['token' => $report->tracking_token])
             ->assertOk()
-            ->assertSee($report->subject);
+            ->assertViewIs('report.status')
+            ->assertSee($report->subject)
+            ->assertSee($report->category->label());
     }
 
     public function test_status_page_shows_timeline_steps(): void
