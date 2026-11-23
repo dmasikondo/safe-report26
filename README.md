@@ -99,7 +99,7 @@ This system is built for long-term sustainability, leveraging the **TALL Stack**
    ```
    This creates the tables and seeds the staff roles, the default superadmin account and the institution's departments. The encryption key from step 4 must be set first, because one migration encrypts any existing report data.
 
-   > ⚠️ The default superadmin uses the email in `database/seeders/SuperAdminSeeder.php` and the password `password`. Change both before going live.
+   > ⚠️ The superadmin account uses `SAFEREPORT_ADMIN_EMAIL` and `SAFEREPORT_ADMIN_PASSWORD` from `.env`. Set the email to your own address before seeding. If the password is left empty, a random one is generated and printed once in the seeder output, so copy it then. Re-running the seeder never changes an existing account's password.
 
 7. **Build the frontend and start the app**
    ```bash

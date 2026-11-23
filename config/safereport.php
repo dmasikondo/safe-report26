@@ -30,6 +30,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Initial superadmin account
+    |--------------------------------------------------------------------------
+    |
+    | Used by the SuperAdminSeeder to create the first staff account. When no
+    | password is set, a random one is generated and printed once.
+    |
+    */
+
+    'super_admin' => [
+        'email' => env('SAFEREPORT_ADMIN_EMAIL', 'admin@example.com'),
+        'password' => env('SAFEREPORT_ADMIN_PASSWORD'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Evidence attachments
     |--------------------------------------------------------------------------
     */

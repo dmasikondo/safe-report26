@@ -5,21 +5,28 @@ namespace Database\Seeders;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class SuperAdminSeeder extends Seeder
 {
+    /**
+     * Create the first superadmin from the SAFEREPORT_ADMIN_* settings.
+     *
+     * An existing account is left untouched, so re-seeding never resets a
+     * password the administrator has already changed.
+     */
     public function run(): void
     {
-        // ── Default superadmin account ────────────────────────────────────
-        // IMPORTANT: Change these credentials immediately after first login.
-        // Do NOT deploy to production without changing email and password.
+        $email = config('safereport.super_admin.email');
+        $configuredPassword = config('safereport.super_admin.password');
+        $password = filled($configuredPassword) ? $configuredPassword : Str::password(20, symbols: false);
 
-        $superAdmin = User::updateOrCreate(
-            ['email' => 'dmasikondo@gmail.com'],
+        $superAdmin = User::firstOrCreate(
+            ['email' => $email],
             [
                 'first_name' => 'System',
                 'last_name' => 'Administrator',
-                'password' => 'password',
+                'password' => $password,
                 'is_active' => true,
             ],
         );
@@ -30,7 +37,20 @@ class SuperAdminSeeder extends Seeder
             $superAdmin->roles()->attach($superAdminRole);
         }
 
-        $this->command->info('Superadmin seeded: admin@safereport.zw / password');
-        $this->command->warn('⚠  Change the default password before deploying to production.');
+        if (! $superAdmin->wasRecentlyCreated) {
+            $this->command->info("Superadmin {$email} already exists; its password was not changed.");
+
+            return;
+        }
+
+        if (filled($configuredPassword)) {
+            $this->command->info("Superadmin created: {$email} (password from SAFEREPORT_ADMIN_PASSWORD).");
+
+            return;
+        }
+
+        $this->command->info("Superadmin created: {$email}");
+        $this->command->warn("Generated password: {$password}");
+        $this->command->warn('Copy it now, it will not be shown again. Change it after your first login.');
     }
 }
