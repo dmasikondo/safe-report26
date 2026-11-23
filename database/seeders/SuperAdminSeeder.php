@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class SuperAdminSeeder extends Seeder
 {
@@ -18,9 +17,9 @@ class SuperAdminSeeder extends Seeder
         $superAdmin = User::updateOrCreate(
             ['email' => 'dmasikondo@gmail.com'],
             [
-                'first_name'      => 'System',
-                'last_name'      => 'Administrator',
-                'password'  => 'password',
+                'first_name' => 'System',
+                'last_name' => 'Administrator',
+                'password' => 'password',
                 'is_active' => true,
             ],
         );

@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\RoleEnum;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Enums\RoleEnum;
 
 class Role extends Model
 {
@@ -14,12 +14,12 @@ class Role extends Model
             'name' => RoleEnum::class,
         ];
     }
+
     protected $fillable = [
         'name',
         'label',
         'description',
     ];
-
 
     // ── Relationship ──────────────────────────────────────────────────────
 
