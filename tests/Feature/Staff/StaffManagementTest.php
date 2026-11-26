@@ -3,6 +3,7 @@
 namespace Tests\Feature\Staff;
 
 use App\Enums\RoleEnum;
+use App\Models\Department;
 use App\Models\User;
 use App\Notifications\StaffInvitationNotification;
 use Database\Seeders\RoleSeeder;
@@ -36,13 +37,14 @@ class StaffManagementTest extends TestCase
         ];
     }
 
-    private function submitCreateForm(array $details, RoleEnum $role): Testable
+    private function submitCreateForm(array $details, RoleEnum $role, ?Department $department = null): Testable
     {
         return Livewire::test('pages::staff.users.create')
             ->set('first_name', $details['first_name'])
             ->set('last_name', $details['last_name'])
             ->set('email', $details['email'])
             ->set('role', $role->value)
+            ->set('department_id', $department ? (string) $department->id : '')
             ->call('save');
     }
 
@@ -69,12 +71,40 @@ class StaffManagementTest extends TestCase
     public function test_admin_creates_supervisors_and_investigators(): void
     {
         $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
+        [$finance, $procurement] = Department::factory()->count(2)->create();
 
-        $this->submitCreateForm($this->newStaffDetails(), RoleEnum::SUPERVISOR)->assertHasNoErrors();
-        $this->submitCreateForm([...$this->newStaffDetails(), 'email' => 'rudo@example.org'], RoleEnum::INVESTIGATOR)->assertHasNoErrors();
+        $this->submitCreateForm($this->newStaffDetails(), RoleEnum::SUPERVISOR, $finance)->assertHasNoErrors();
+        $this->submitCreateForm([...$this->newStaffDetails(), 'email' => 'rudo@example.org'], RoleEnum::INVESTIGATOR, $procurement)->assertHasNoErrors();
 
-        $this->assertTrue(User::where('email', 'tendai.moyo@example.org')->firstOrFail()->hasRole(RoleEnum::SUPERVISOR));
-        $this->assertTrue(User::where('email', 'rudo@example.org')->firstOrFail()->hasRole(RoleEnum::INVESTIGATOR));
+        $supervisor = User::where('email', 'tendai.moyo@example.org')->firstOrFail();
+        $investigator = User::where('email', 'rudo@example.org')->firstOrFail();
+
+        $this->assertTrue($supervisor->hasRole(RoleEnum::SUPERVISOR));
+        $this->assertTrue($supervisor->department->is($finance));
+        $this->assertTrue($investigator->hasRole(RoleEnum::INVESTIGATOR));
+        $this->assertTrue($investigator->department->is($procurement));
+    }
+
+    public function test_supervisors_and_investigators_must_have_a_department(): void
+    {
+        $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
+
+        $this->submitCreateForm($this->newStaffDetails(), RoleEnum::SUPERVISOR)
+            ->assertHasErrors(['department_id' => 'required']);
+        $this->submitCreateForm($this->newStaffDetails(), RoleEnum::INVESTIGATOR)
+            ->assertHasErrors(['department_id' => 'required']);
+
+        $this->assertDatabaseMissing('users', ['email' => 'tendai.moyo@example.org']);
+    }
+
+    public function test_administrators_are_created_without_a_department(): void
+    {
+        $this->actingAs(User::factory()->withRole(RoleEnum::SUPERADMIN)->create());
+
+        $this->submitCreateForm($this->newStaffDetails(), RoleEnum::ADMIN, Department::factory()->create())
+            ->assertHasNoErrors();
+
+        $this->assertNull(User::where('email', 'tendai.moyo@example.org')->firstOrFail()->department_id);
     }
 
     public function test_admin_cannot_create_an_admin(): void
@@ -158,7 +188,7 @@ class StaffManagementTest extends TestCase
     public function test_invitation_link_lets_the_new_staff_member_set_a_password(): void
     {
         $this->actingAs(User::factory()->withRole(RoleEnum::SUPERADMIN)->create());
-        $this->submitCreateForm($this->newStaffDetails(), RoleEnum::INVESTIGATOR);
+        $this->submitCreateForm($this->newStaffDetails(), RoleEnum::INVESTIGATOR, Department::factory()->create());
         auth()->logout();
 
         $created = User::where('email', 'tendai.moyo@example.org')->firstOrFail();

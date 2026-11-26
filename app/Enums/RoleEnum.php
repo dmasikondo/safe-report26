@@ -28,4 +28,13 @@ enum RoleEnum: string
             self::INVESTIGATOR => 'Receives, reviews, and manages assigned cases.',
         };
     }
+
+    /**
+     * Case handlers belong to a department, so cases about their own
+     * department can be kept away from them. Administrators do not.
+     */
+    public function requiresDepartment(): bool
+    {
+        return in_array($this, [self::SUPERVISOR, self::INVESTIGATOR], strict: true);
+    }
 }

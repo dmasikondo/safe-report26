@@ -23,6 +23,14 @@ class Department extends Model
     }
 
     /**
+     * Supervisors and investigators who work in this department.
+     */
+    public function staff(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    /**
      * Alphabetical order, as shown in the report form and staff filters.
      */
     public function scopeOrdered(Builder $query): Builder

@@ -65,7 +65,7 @@ new #[Title('Staff')] class extends Component {
         $search = trim($this->search);
 
         return User::query()
-            ->with('roles')
+            ->with(['roles', 'department'])
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
                 ->where('first_name', 'like', "%{$search}%")
                 ->orWhere('last_name', 'like', "%{$search}%")
@@ -105,6 +105,7 @@ new #[Title('Staff')] class extends Component {
         <flux:table.columns>
             <flux:table.column>{{ __('Name') }}</flux:table.column>
             <flux:table.column>{{ __('Role') }}</flux:table.column>
+            <flux:table.column>{{ __('Department') }}</flux:table.column>
             <flux:table.column>{{ __('Status') }}</flux:table.column>
             <flux:table.column>{{ __('Last sign-in') }}</flux:table.column>
             <flux:table.column></flux:table.column>
@@ -118,6 +119,7 @@ new #[Title('Staff')] class extends Component {
                         <div class="text-xs text-zinc-500">{{ $member->email }}</div>
                     </flux:table.cell>
                     <flux:table.cell>{{ $member->roleLabels() ?: '—' }}</flux:table.cell>
+                    <flux:table.cell>{{ $member->department?->name ?? '—' }}</flux:table.cell>
                     <flux:table.cell>
                         <flux:badge size="sm" :color="$member->is_active ? 'green' : 'zinc'">
                             {{ $member->is_active ? __('Active') : __('Deactivated') }}
@@ -146,7 +148,7 @@ new #[Title('Staff')] class extends Component {
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="5" class="py-8 text-center">{{ __('No staff match these filters.') }}</flux:table.cell>
+                    <flux:table.cell colspan="6" class="py-8 text-center">{{ __('No staff match these filters.') }}</flux:table.cell>
                 </flux:table.row>
             @endforelse
         </flux:table.rows>

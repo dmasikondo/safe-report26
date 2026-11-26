@@ -3,8 +3,10 @@
 use App\Actions\Staff\CreateStaffMember;
 use App\Concerns\ProfileValidationRules;
 use App\Enums\RoleEnum;
+use App\Models\Department;
 use App\Models\User;
 use Flux\Flux;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -21,6 +23,8 @@ new #[Title('Add staff member')] class extends Component {
     public string $email = '';
 
     public string $role = '';
+
+    public string $department_id = '';
 
     public function mount(): void
     {
@@ -40,6 +44,24 @@ new #[Title('Add staff member')] class extends Component {
         return Auth::user()->creatableRoles();
     }
 
+    /**
+     * @return Collection<int, Department>
+     */
+    #[Computed]
+    public function departments(): Collection
+    {
+        return Department::ordered()->get(['id', 'name']);
+    }
+
+    /**
+     * Whether the chosen role needs a department (supervisors and investigators).
+     */
+    #[Computed]
+    public function roleRequiresDepartment(): bool
+    {
+        return RoleEnum::tryFrom($this->role)?->requiresDepartment() ?? false;
+    }
+
     public function save(CreateStaffMember $createStaffMember): void
     {
         $this->authorize('create', User::class);
@@ -47,8 +69,16 @@ new #[Title('Add staff member')] class extends Component {
         $validated = $this->validate([
             ...$this->profileRules(),
             'role' => ['required', Rule::enum(RoleEnum::class)->only($this->creatableRoles)],
+            'department_id' => [
+                Rule::requiredIf(fn (): bool => $this->roleRequiresDepartment),
+                'nullable',
+                'integer',
+                Rule::exists('departments', 'id'),
+            ],
         ], [
             'role.enum' => __('You are not allowed to create accounts with this role.'),
+            'department_id.required' => __('Choose the department this staff member works in.'),
+            'department_id.exists' => __('Choose a department from the list.'),
         ]);
 
         $role = RoleEnum::from($validated['role']);
@@ -86,7 +116,7 @@ new #[Title('Add staff member')] class extends Component {
 
         <flux:input wire:model="email" :label="__('Email address')" type="email" required />
 
-        <flux:radio.group wire:model="role" :label="__('Role')">
+        <flux:radio.group wire:model.live="role" :label="__('Role')">
             @foreach ($this->creatableRoles as $roleOption)
                 <flux:radio
                     wire:key="role-{{ $roleOption->value }}"
@@ -96,6 +126,19 @@ new #[Title('Add staff member')] class extends Component {
                 />
             @endforeach
         </flux:radio.group>
+
+        @if ($this->roleRequiresDepartment)
+            <flux:field>
+                <flux:label>{{ __('Department') }}</flux:label>
+                <flux:select wire:model="department_id" :placeholder="__('Choose a department')" required>
+                    @foreach ($this->departments as $department)
+                        <flux:select.option wire:key="department-{{ $department->id }}" :value="$department->id">{{ $department->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:description>{{ __('Used to avoid assigning this person cases about their own department.') }}</flux:description>
+                <flux:error name="department_id" />
+            </flux:field>
+        @endif
 
         <div class="flex gap-3">
             <flux:button type="submit" variant="primary">{{ __('Create account') }}</flux:button>
