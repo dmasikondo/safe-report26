@@ -97,6 +97,51 @@ class StaffManagementTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'tendai.moyo@example.org']);
     }
 
+    public function test_new_investigator_can_be_placed_in_a_supervisors_team(): void
+    {
+        $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create(['first_name' => 'Chipo', 'last_name' => 'Mutasa']);
+
+        Livewire::test('pages::staff.users.create')
+            ->set('first_name', 'Tendai')
+            ->set('last_name', 'Moyo')
+            ->set('email', 'tendai.moyo@example.org')
+            ->set('role', RoleEnum::INVESTIGATOR->value)
+            ->set('department_id', (string) Department::factory()->create()->id)
+            ->set('supervisor_id', (string) $supervisor->id)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $investigator = User::where('email', 'tendai.moyo@example.org')->firstOrFail();
+        $this->assertTrue($investigator->supervisor->is($supervisor));
+
+        $this->get(route('staff.users.index'))->assertSee('Chipo Mutasa');
+    }
+
+    public function test_supervisor_choice_must_be_an_active_supervisor_and_only_applies_to_investigators(): void
+    {
+        $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
+        $inactiveSupervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->inactive()->create();
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        $department = Department::factory()->create();
+
+        Livewire::test('pages::staff.users.create')
+            ->set('first_name', 'Tendai')
+            ->set('last_name', 'Moyo')
+            ->set('email', 'tendai.moyo@example.org')
+            ->set('role', RoleEnum::INVESTIGATOR->value)
+            ->set('department_id', (string) $department->id)
+            ->set('supervisor_id', (string) $inactiveSupervisor->id)
+            ->call('save')
+            ->assertHasErrors(['supervisor_id' => 'Choose an active supervisor.'])
+            ->set('role', RoleEnum::SUPERVISOR->value)
+            ->set('supervisor_id', (string) $supervisor->id)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertNull(User::where('email', 'tendai.moyo@example.org')->firstOrFail()->supervisor_id);
+    }
+
     public function test_administrators_are_created_without_a_department(): void
     {
         $this->actingAs(User::factory()->withRole(RoleEnum::SUPERADMIN)->create());

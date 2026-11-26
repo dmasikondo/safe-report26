@@ -18,9 +18,9 @@ class CreateStaffMember
      * Authorization and validation are the caller's responsibility.
      *
      * Only supervisors and investigators keep a department; it is dropped for
-     * administrators.
+     * administrators. Only investigators keep a supervisor.
      *
-     * @param  array{first_name: string, last_name: string, email: string, department_id?: int|string|null}  $attributes
+     * @param  array{first_name: string, last_name: string, email: string, department_id?: int|string|null, supervisor_id?: int|string|null}  $attributes
      */
     public function handle(array $attributes, RoleEnum $role): User
     {
@@ -30,6 +30,7 @@ class CreateStaffMember
                 'last_name' => $attributes['last_name'],
                 'email' => $attributes['email'],
                 'department_id' => $role->requiresDepartment() ? ($attributes['department_id'] ?? null) : null,
+                'supervisor_id' => $role === RoleEnum::INVESTIGATOR ? (($attributes['supervisor_id'] ?? null) ?: null) : null,
                 // Unusable random password until the invitation is accepted.
                 'password' => Str::password(64),
                 'is_active' => true,
