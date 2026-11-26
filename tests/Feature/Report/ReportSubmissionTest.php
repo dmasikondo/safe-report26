@@ -259,6 +259,32 @@ class ReportSubmissionTest extends TestCase
         $this->assertDatabaseCount('reports', 0);
     }
 
+    public function test_json_submission_returns_the_confirmation_url(): void
+    {
+        Storage::fake('local');
+
+        $response = $this->postJson(route('report.store'), $this->validPayload([
+            'attachments' => [UploadedFile::fake()->image('photo.png', 40, 40)],
+        ]));
+
+        $report = Report::first();
+        $response->assertOk()
+            ->assertExactJson(['redirect' => route('report.submitted', $report->tracking_token)]);
+        $this->assertCount(1, $report->attachments);
+    }
+
+    public function test_json_submission_with_an_oversized_attachment_returns_validation_errors(): void
+    {
+        Storage::fake('local');
+
+        $this->postJson(route('report.store'), $this->validPayload([
+            'attachments' => [UploadedFile::fake()->image('big.jpg')->size(2049)],
+        ]))->assertUnprocessable()
+            ->assertJsonValidationErrors('attachments.0');
+
+        $this->assertDatabaseCount('reports', 0);
+    }
+
     public function test_unsupported_file_types_are_rejected(): void
     {
         Storage::fake('local');

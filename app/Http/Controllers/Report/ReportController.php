@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreReportRequest;
 use App\Models\Department;
 use App\Models\Report;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,9 +32,10 @@ class ReportController extends Controller
      * Store a new report.
      *
      * Tracking token is auto-generated in Report::booted().
-     * No user identity is attached.
+     * No user identity is attached. JSON requests (the form's upload-progress
+     * submit) receive the confirmation URL instead of a redirect.
      */
-    public function store(StoreReportRequest $request, StoreReportAttachment $storeAttachment): RedirectResponse
+    public function store(StoreReportRequest $request, StoreReportAttachment $storeAttachment): RedirectResponse|JsonResponse
     {
         $category = ReportCategoryEnum::from($request->validated('category'));
         $storedPaths = [];
@@ -57,8 +59,13 @@ class ReportController extends Controller
             throw $exception;
         }
 
-        return redirect()
-            ->route('report.submitted', ['token' => $report->tracking_token]);
+        $confirmationUrl = route('report.submitted', ['token' => $report->tracking_token]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['redirect' => $confirmationUrl]);
+        }
+
+        return redirect()->to($confirmationUrl);
     }
 
     /**
