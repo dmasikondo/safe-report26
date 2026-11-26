@@ -41,6 +41,17 @@
                             {{ __('Staff') }}
                         </flux:sidebar.item>
                     @endcan
+
+                    @can('manageTeams', App\Models\User::class)
+                        <flux:sidebar.item
+                            icon="user-group"
+                            :href="route('staff.teams.index')"
+                            :current="request()->routeIs('staff.teams.*')"
+                            wire:navigate
+                        >
+                            {{ __('Teams') }}
+                        </flux:sidebar.item>
+                    @endcan
                 </flux:sidebar.group>
                 @endauth
             </flux:sidebar.nav>

@@ -60,6 +60,14 @@ class UserPolicy
     }
 
     /**
+     * Admins place investigators in supervisors' teams.
+     */
+    public function manageTeams(User $authUser): bool
+    {
+        return $authUser->isAdmin();
+    }
+
+    /**
      * Re-send the set-password invitation to an account the user could
      * have created.
      */

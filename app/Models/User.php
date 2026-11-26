@@ -19,7 +19,7 @@ use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-#[Fillable(['first_name', 'last_name', 'email', 'department_id', 'password', 'is_active', 'last_login_at'])]
+#[Fillable(['first_name', 'last_name', 'email', 'department_id', 'supervisor_id', 'password', 'is_active', 'last_login_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -54,6 +54,22 @@ class User extends Authenticatable implements PasskeyUser
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * The supervisor whose team this investigator belongs to.
+     */
+    public function supervisor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'supervisor_id');
+    }
+
+    /**
+     * Investigators in this supervisor's team.
+     */
+    public function team(): HasMany
+    {
+        return $this->hasMany(User::class, 'supervisor_id');
     }
 
     // ── Core role checks ──────────────────────────────────────────────────
@@ -204,6 +220,14 @@ class User extends Authenticatable implements PasskeyUser
     public function scopeInactive($query)
     {
         return $query->where('is_active', false);
+    }
+
+    /**
+     * Users holding the given role.
+     */
+    public function scopeWithRole($query, RoleEnum $role)
+    {
+        return $query->whereHas('roles', fn ($roles) => $roles->where('name', $role->value));
     }
 
     /**

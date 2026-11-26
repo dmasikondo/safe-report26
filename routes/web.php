@@ -30,6 +30,9 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
         // Staff account management — superadmins and admins
         Route::livewire('users', 'pages::staff.users.index')->name('users.index');
         Route::livewire('users/create', 'pages::staff.users.create')->name('users.create');
+
+        // Supervisor teams — superadmins and admins
+        Route::livewire('teams', 'pages::staff.teams.index')->name('teams.index');
     });
 });
 

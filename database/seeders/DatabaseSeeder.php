@@ -19,5 +19,10 @@ class DatabaseSeeder extends Seeder
             SuperAdminSeeder::class,
             DepartmentSeeder::class,
         ]);
+
+        // Demo accounts share a known password, so never create them in production.
+        if (app()->environment('local', 'testing')) {
+            $this->call(DemoStaffSeeder::class);
+        }
     }
 }
