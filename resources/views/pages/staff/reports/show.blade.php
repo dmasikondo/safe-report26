@@ -17,6 +17,10 @@ new #[Title('Report')] class extends Component {
 
     public ?string $assigneeId = null;
 
+    public bool $includeSameDepartment = false;
+
+    public string $assignmentReason = '';
+
     public string $priority = '2';
 
     public string $statusReason = '';
@@ -68,8 +72,23 @@ new #[Title('Report')] class extends Component {
         ]);
 
         $assignee = filled($validated['assigneeId']) ? User::find($validated['assigneeId']) : null;
+        $needsReason = $assignee !== null
+            && $this->isSameDepartment($assignee)
+            && $assignee->id !== $this->report->assigned_to;
 
-        $this->report->assignTo($assignee, Auth::user());
+        if ($needsReason) {
+            $this->validate([
+                'assignmentReason' => ['required', 'string', 'max:2000'],
+            ], [
+                'assignmentReason.required' => __('Explain why someone from the same department must handle this case.'),
+            ]);
+        }
+
+        $this->report->assignTo($assignee, Auth::user(), $needsReason ? trim($this->assignmentReason) : null);
+
+        $this->includeSameDepartment = false;
+        $this->assignmentReason = '';
+        unset($this->assignableStaff, $this->hiddenSameDepartmentCount);
         $this->refreshReport();
 
         Flux::toast(
@@ -130,9 +149,61 @@ new #[Title('Report')] class extends Component {
     {
         return User::query()
             ->assignableToCases()
+            ->with(['roles', 'department'])
+            ->when($this->report->department_id !== null && ! $this->includeSameDepartment, fn ($query) => $query->where(fn ($query) => $query
+                ->outsideDepartment($this->report->department_id)
+                // Keep the current assignee so an existing assignment still shows.
+                ->when($this->report->assigned_to, fn ($query, int $assigneeId) => $query->orWhere('users.id', $assigneeId))))
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->get();
+    }
+
+    /**
+     * How many case handlers from this case's department are left out of the list.
+     */
+    #[Computed]
+    public function hiddenSameDepartmentCount(): int
+    {
+        if ($this->report->department_id === null || $this->includeSameDepartment) {
+            return 0;
+        }
+
+        return User::query()
+            ->assignableToCases()
+            ->where('department_id', $this->report->department_id)
+            ->when($this->report->assigned_to, fn ($query, int $assigneeId) => $query->whereKeyNot($assigneeId))
+            ->count();
+    }
+
+    /**
+     * Whether the selected assignee works in this case's department and
+     * was not already assigned, so a reason must be given.
+     */
+    #[Computed]
+    public function selectedNeedsReason(): bool
+    {
+        $assignee = $this->assignableStaff->firstWhere('id', (int) $this->assigneeId);
+
+        return $assignee !== null
+            && $this->isSameDepartment($assignee)
+            && $assignee->id !== $this->report->assigned_to;
+    }
+
+    public function updatedIncludeSameDepartment(): void
+    {
+        unset($this->assignableStaff, $this->hiddenSameDepartmentCount);
+
+        if (filled($this->assigneeId) && ! $this->assignableStaff->contains('id', (int) $this->assigneeId)) {
+            $this->assigneeId = $this->report->assigned_to ? (string) $this->report->assigned_to : null;
+            $this->assignmentReason = '';
+        }
+    }
+
+    private function isSameDepartment(User $staff): bool
+    {
+        return $this->report->department_id !== null
+            && $staff->department_id === $this->report->department_id;
     }
 
     /**
@@ -351,14 +422,33 @@ new #[Title('Report')] class extends Component {
 
                 @can('assign', $report)
                     <form wire:submit="assign" class="mt-4 flex flex-col gap-3">
-                        <flux:select wire:model="assigneeId" :label="__('Assigned to')">
+                        <flux:select wire:model.live="assigneeId" :label="__('Assigned to')">
                             <flux:select.option value="">{{ __('Unassigned') }}</flux:select.option>
                             @foreach ($this->assignableStaff as $staff)
                                 <flux:select.option wire:key="staff-{{ $staff->id }}" :value="$staff->id">
-                                    {{ $staff->full_name }} ({{ $staff->roleLabels() }})
+                                    {{ $staff->full_name }} ({{ collect([$staff->roleLabels(), $staff->department?->name])->filter()->join(' · ') }})@if ($report->department_id !== null && $staff->department_id === $report->department_id) — {{ __('same department') }}@endif
                                 </flux:select.option>
                             @endforeach
                         </flux:select>
+
+                        @if ($report->department_id !== null && ($this->hiddenSameDepartmentCount > 0 || $includeSameDepartment))
+                            <flux:checkbox
+                                wire:model.live="includeSameDepartment"
+                                :label="__('Show staff from :department', ['department' => $report->department?->name])"
+                                :description="$includeSameDepartment
+                                    ? __('Assigning one of them requires a reason, recorded in the case log.')
+                                    : trans_choice(':count person is hidden because this case is about their department.|:count people are hidden because this case is about their department.', $this->hiddenSameDepartmentCount, ['count' => $this->hiddenSameDepartmentCount])"
+                            />
+                        @endif
+
+                        @if ($this->selectedNeedsReason)
+                            <flux:textarea
+                                wire:model="assignmentReason"
+                                :label="__('Reason for assigning someone from the same department')"
+                                rows="3"
+                                required
+                            />
+                        @endif
                         <div>
                             <flux:button type="submit" size="sm">{{ __('Save assignment') }}</flux:button>
                         </div>

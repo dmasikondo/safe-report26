@@ -156,8 +156,10 @@ class Report extends Model
 
     /**
      * Assign the case to a staff member, or pass null to unassign it.
+     * An optional reason is kept in the case log, e.g. why someone from the
+     * case's own department was chosen.
      */
-    public function assignTo(?User $assignee, User $actor): void
+    public function assignTo(?User $assignee, User $actor, ?string $reason = null): void
     {
         if ($assignee?->id === $this->assigned_to) {
             return;
@@ -169,6 +171,7 @@ class Report extends Model
             attributes: ['assigned_to' => $assignee?->id],
             fromValue: $this->assigned_to,
             toValue: $assignee?->id,
+            body: $reason,
         );
     }
 

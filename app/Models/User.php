@@ -217,6 +217,18 @@ class User extends Authenticatable implements PasskeyUser
         ]));
     }
 
+    /**
+     * Leave out staff who work in the given department, so a case about a
+     * department is not handed to someone from it. Staff with no department
+     * are kept. A null department applies no filter.
+     */
+    public function scopeOutsideDepartment($query, ?int $departmentId)
+    {
+        return $query->when($departmentId !== null, fn ($query) => $query->where(
+            fn ($query) => $query->whereNull('department_id')->orWhere('department_id', '!=', $departmentId)
+        ));
+    }
+
     public function assignedReports(): HasMany
     {
         return $this->hasMany(Report::class, 'assigned_to');

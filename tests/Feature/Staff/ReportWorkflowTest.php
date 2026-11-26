@@ -150,6 +150,67 @@ class ReportWorkflowTest extends TestCase
         $this->assertNull($report->fresh()->assigned_to);
     }
 
+    public function test_staff_from_the_case_department_are_hidden_and_cannot_be_assigned(): void
+    {
+        $finance = Department::factory()->create();
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        $insider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Insider', 'department_id' => $finance->id]);
+        $outsider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Outsider', 'department_id' => Department::factory()->create()->id]);
+        $report = Report::factory()->forDepartment($finance)->create();
+
+        $this->actingAs($supervisor);
+
+        Livewire::test('pages::staff.reports.show', ['report' => $report])
+            ->assertSee('Outsider')
+            ->assertDontSee('Insider')
+            ->set('assigneeId', (string) $insider->id)
+            ->call('assign')
+            ->assertHasErrors('assigneeId')
+            ->set('assigneeId', (string) $outsider->id)
+            ->call('assign')
+            ->assertHasNoErrors();
+
+        $this->assertSame($outsider->id, $report->fresh()->assigned_to);
+    }
+
+    public function test_reports_without_a_department_list_all_case_staff(): void
+    {
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Insider', 'department_id' => Department::factory()->create()->id]);
+        $report = Report::factory()->create(['department_id' => null]);
+
+        $this->actingAs($supervisor);
+
+        Livewire::test('pages::staff.reports.show', ['report' => $report])
+            ->assertSee('Insider')
+            ->assertDontSee('Show staff from');
+    }
+
+    public function test_same_department_staff_can_be_assigned_with_a_recorded_reason(): void
+    {
+        $finance = Department::factory()->create();
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        $insider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['department_id' => $finance->id]);
+        $report = Report::factory()->forDepartment($finance)->create();
+
+        $this->actingAs($supervisor);
+
+        Livewire::test('pages::staff.reports.show', ['report' => $report])
+            ->set('includeSameDepartment', true)
+            ->set('assigneeId', (string) $insider->id)
+            ->call('assign')
+            ->assertHasErrors(['assignmentReason' => 'required'])
+            ->set('assignmentReason', 'Only investigator available in this region.')
+            ->call('assign')
+            ->assertHasNoErrors();
+
+        $this->assertSame($insider->id, $report->fresh()->assigned_to);
+        $this->assertSame(
+            'Only investigator available in this region.',
+            $report->activities()->where('type', ReportActivityTypeEnum::ASSIGNED)->sole()->body,
+        );
+    }
+
     public function test_investigator_cannot_reassign_their_case(): void
     {
         $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create();
