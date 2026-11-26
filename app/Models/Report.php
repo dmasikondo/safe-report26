@@ -159,7 +159,7 @@ class Report extends Model
      * An optional reason is kept in the case log, e.g. why someone from the
      * case's own department was chosen.
      */
-    public function assignTo(?User $assignee, User $actor, ?string $reason = null): void
+    public function assignTo(?User $assignee, ?User $actor, ?string $reason = null): void
     {
         if ($assignee?->id === $this->assigned_to) {
             return;
@@ -205,12 +205,13 @@ class Report extends Model
 
     /**
      * Update the report and write the matching activity entry atomically.
+     * A null actor means the system made the change.
      *
      * @param  array<string, mixed>  $attributes
      */
     private function recordChange(
         ReportActivityTypeEnum $type,
-        User $actor,
+        ?User $actor,
         array $attributes,
         string|int|null $fromValue,
         string|int|null $toValue,
@@ -220,7 +221,8 @@ class Report extends Model
             $this->update($attributes);
 
             $this->activities()->create([
-                'user_id' => $actor->id,
+                'user_id' => $actor?->id,
+                'is_automatic' => $actor === null,
                 'type' => $type,
                 'from_value' => $fromValue,
                 'to_value' => $toValue,

@@ -26,6 +26,14 @@ class ReportPolicy
     }
 
     /**
+     * Turning automatic case assignment on or off is an admin task.
+     */
+    public function configureAutoAssignment(User $user): bool
+    {
+        return $user->isAdmin();
+    }
+
+    /**
      * Assigning and reassigning cases is a supervisory task.
      */
     public function assign(User $user, Report $report): bool

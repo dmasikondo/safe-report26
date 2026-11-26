@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Report;
 
+use App\Actions\Reports\AutoAssignReport;
 use App\Actions\Reports\StoreReportAttachment;
 use App\Enums\ReportCategoryEnum;
 use App\Http\Controllers\Controller;
@@ -32,10 +33,11 @@ class ReportController extends Controller
      * Store a new report.
      *
      * Tracking token is auto-generated in Report::booted().
-     * No user identity is attached. JSON requests (the form's upload-progress
+     * No user identity is attached. The report is then auto-assigned or
+     * flagged to admins (see AutoAssignReport). JSON requests (the form's upload-progress
      * submit) receive the confirmation URL instead of a redirect.
      */
-    public function store(StoreReportRequest $request, StoreReportAttachment $storeAttachment): RedirectResponse|JsonResponse
+    public function store(StoreReportRequest $request, StoreReportAttachment $storeAttachment, AutoAssignReport $autoAssignReport): RedirectResponse|JsonResponse
     {
         $category = ReportCategoryEnum::from($request->validated('category'));
         $storedPaths = [];
@@ -58,6 +60,9 @@ class ReportController extends Controller
 
             throw $exception;
         }
+
+        // The report is safely stored; a problem assigning it must not fail the reporter's submission.
+        rescue(fn () => $autoAssignReport->handle($report));
 
         $confirmationUrl = route('report.submitted', ['token' => $report->tracking_token]);
 

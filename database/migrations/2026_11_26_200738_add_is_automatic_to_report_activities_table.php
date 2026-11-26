@@ -1,0 +1,31 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * Marks case log entries made by the system (e.g. automatic assignment),
+     * so they are not mistaken for entries by a deleted staff member.
+     */
+    public function up(): void
+    {
+        Schema::table('report_activities', function (Blueprint $table) {
+            $table->boolean('is_automatic')->default(false)->after('user_id');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('report_activities', function (Blueprint $table) {
+            $table->dropColumn('is_automatic');
+        });
+    }
+};

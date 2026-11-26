@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\Report;
+use App\Models\Setting;
+use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -8,6 +10,58 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Dashboard')] class extends Component {
+    public bool $autoAssign = true;
+
+    public function mount(): void
+    {
+        $this->autoAssign = Setting::autoAssignEnabled();
+    }
+
+    /**
+     * Admins switch automatic case assignment on or off.
+     */
+    public function updatedAutoAssign(bool $enabled): void
+    {
+        $this->authorize('configureAutoAssignment', Report::class);
+
+        Setting::put(Setting::AUTO_ASSIGN_CASES, $enabled);
+
+        Flux::toast(
+            variant: 'success',
+            text: $enabled ? __('Automatic assignment turned on.') : __('Automatic assignment turned off.'),
+        );
+    }
+
+    /**
+     * Latest notifications for the signed-in user, unread first.
+     *
+     * @return \Illuminate\Support\Collection<int, \Illuminate\Notifications\DatabaseNotification>
+     */
+    #[Computed]
+    public function notifications(): \Illuminate\Support\Collection
+    {
+        return Auth::user()->notifications()
+            ->reorder()
+            ->orderByRaw('read_at is not null')
+            ->latest()
+            ->limit(10)
+            ->get();
+    }
+
+    public function markAllNotificationsRead(): void
+    {
+        Auth::user()->unreadNotifications->markAsRead();
+
+        unset($this->notifications);
+    }
+
+    public function openNotification(string $notificationId): void
+    {
+        $notification = Auth::user()->notifications()->findOrFail($notificationId);
+        $notification->markAsRead();
+
+        $this->redirect($notification->data['url'] ?? route('dashboard'), navigate: true);
+    }
     /**
      * Headline numbers for the signed-in staff member's caseload.
      *
@@ -66,6 +120,44 @@ new #[Title('Dashboard')] class extends Component {
         <flux:heading size="xl" level="1">{{ __('Welcome, :name', ['name' => auth()->user()->first_name]) }}</flux:heading>
         <flux:text class="mt-1">{{ auth()->user()->roleLabels() ?: __('No role assigned') }}</flux:text>
     </div>
+
+    @can('configureAutoAssignment', App\Models\Report::class)
+        <flux:card>
+            <flux:switch
+                wire:model.live="autoAssign"
+                :label="__('Automatic case assignment')"
+                :description="__('New reports go to the active investigator outside the report\'s department with the fewest open cases. Sexual harassment reports are never assigned automatically; admins are notified instead.')"
+            />
+        </flux:card>
+    @endcan
+
+    @if ($this->notifications->isNotEmpty())
+        <flux:card>
+            <div class="mb-2 flex items-center justify-between">
+                <flux:heading size="lg">{{ __('Notifications') }}</flux:heading>
+                @if ($this->notifications->whereNull('read_at')->isNotEmpty())
+                    <flux:button size="sm" variant="ghost" wire:click="markAllNotificationsRead">{{ __('Mark all as read') }}</flux:button>
+                @endif
+            </div>
+
+            @foreach ($this->notifications as $notification)
+                <button
+                    type="button"
+                    wire:key="notification-{{ $notification->id }}"
+                    wire:click="openNotification('{{ $notification->id }}')"
+                    class="flex w-full items-start gap-3 border-t border-zinc-100 py-3 text-start first:border-t-0 dark:border-zinc-700"
+                >
+                    <span @class(['mt-1.5 size-2 shrink-0 rounded-full', 'bg-brand-600' => $notification->read_at === null, 'bg-transparent' => $notification->read_at !== null])></span>
+                    <span class="min-w-0 flex-1">
+                        <span @class(['block text-sm', 'font-medium text-zinc-900 dark:text-zinc-100' => $notification->read_at === null, 'text-zinc-500 dark:text-zinc-400' => $notification->read_at !== null])>
+                            {{ $notification->data['message'] ?? '' }}
+                        </span>
+                        <span class="text-xs text-zinc-500">{{ $notification->created_at->diffForHumans() }}</span>
+                    </span>
+                </button>
+            @endforeach
+        </flux:card>
+    @endif
 
     @if (empty($this->stats))
         <flux:callout icon="information-circle" variant="secondary">

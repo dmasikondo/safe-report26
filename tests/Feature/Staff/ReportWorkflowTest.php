@@ -8,8 +8,10 @@ use App\Enums\RoleEnum;
 use App\Models\Department;
 use App\Models\Report;
 use App\Models\User;
+use App\Notifications\CaseAssignedNotification;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -112,7 +114,7 @@ class ReportWorkflowTest extends TestCase
     public function test_supervisor_assigns_a_case_to_an_investigator(): void
     {
         $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
-        $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create();
+        $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['supervisor_id' => $supervisor->id]);
         $report = Report::factory()->create();
 
         $this->actingAs($supervisor);
@@ -154,8 +156,8 @@ class ReportWorkflowTest extends TestCase
     {
         $finance = Department::factory()->create();
         $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
-        $insider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Insider', 'department_id' => $finance->id]);
-        $outsider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Outsider', 'department_id' => Department::factory()->create()->id]);
+        $insider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Insider', 'department_id' => $finance->id, 'supervisor_id' => $supervisor->id]);
+        $outsider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Outsider', 'department_id' => Department::factory()->create()->id, 'supervisor_id' => $supervisor->id]);
         $report = Report::factory()->forDepartment($finance)->create();
 
         $this->actingAs($supervisor);
@@ -176,7 +178,7 @@ class ReportWorkflowTest extends TestCase
     public function test_reports_without_a_department_list_all_case_staff(): void
     {
         $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
-        User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Insider', 'department_id' => Department::factory()->create()->id]);
+        User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Insider', 'department_id' => Department::factory()->create()->id, 'supervisor_id' => $supervisor->id]);
         $report = Report::factory()->create(['department_id' => null]);
 
         $this->actingAs($supervisor);
@@ -190,7 +192,7 @@ class ReportWorkflowTest extends TestCase
     {
         $finance = Department::factory()->create();
         $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
-        $insider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['department_id' => $finance->id]);
+        $insider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['department_id' => $finance->id, 'supervisor_id' => $supervisor->id]);
         $report = Report::factory()->forDepartment($finance)->create();
 
         $this->actingAs($supervisor);
@@ -209,6 +211,46 @@ class ReportWorkflowTest extends TestCase
             'Only investigator available in this region.',
             $report->activities()->where('type', ReportActivityTypeEnum::ASSIGNED)->sole()->body,
         );
+    }
+
+    public function test_supervisors_assign_only_within_their_own_team(): void
+    {
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        $teamMember = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Teammate', 'supervisor_id' => $supervisor->id]);
+        $outsider = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['first_name' => 'Stranger']);
+        $report = Report::factory()->create(['department_id' => null]);
+
+        $this->actingAs($supervisor);
+
+        Livewire::test('pages::staff.reports.show', ['report' => $report])
+            ->assertSee('Teammate')
+            ->assertDontSee('Stranger')
+            ->set('assigneeId', (string) $outsider->id)
+            ->call('assign')
+            ->assertHasErrors('assigneeId');
+
+        $this->assertNull($report->fresh()->assigned_to);
+        $this->assertNotNull($teamMember);
+    }
+
+    public function test_admins_can_assign_any_investigator_and_the_team_is_notified(): void
+    {
+        Notification::fake();
+        $admin = User::factory()->withRole(RoleEnum::ADMIN)->create();
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['supervisor_id' => $supervisor->id]);
+        $report = Report::factory()->create(['department_id' => null]);
+
+        $this->actingAs($admin);
+
+        Livewire::test('pages::staff.reports.show', ['report' => $report])
+            ->set('assigneeId', (string) $investigator->id)
+            ->call('assign')
+            ->assertHasNoErrors();
+
+        $this->assertSame($investigator->id, $report->fresh()->assigned_to);
+        Notification::assertSentTo([$investigator, $supervisor], CaseAssignedNotification::class);
+        Notification::assertNotSentTo($admin, CaseAssignedNotification::class);
     }
 
     public function test_investigator_cannot_reassign_their_case(): void

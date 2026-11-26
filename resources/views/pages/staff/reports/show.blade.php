@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Reports\NotifyCaseAssignment;
 use App\Enums\ReportActivityTypeEnum;
 use App\Enums\ReportStatusEnum;
 use App\Models\Report;
@@ -58,7 +59,7 @@ new #[Title('Report')] class extends Component {
         Flux::toast(variant: 'success', text: __('Status changed to :status.', ['status' => $target->label()]));
     }
 
-    public function assign(): void
+    public function assign(NotifyCaseAssignment $notifyCaseAssignment): void
     {
         $this->authorize('assign', $this->report);
 
@@ -84,7 +85,13 @@ new #[Title('Report')] class extends Component {
             ]);
         }
 
+        $previousAssigneeId = $this->report->assigned_to;
+
         $this->report->assignTo($assignee, Auth::user(), $needsReason ? trim($this->assignmentReason) : null);
+
+        if ($assignee !== null && $assignee->id !== $previousAssigneeId) {
+            $notifyCaseAssignment->handle($this->report, $assignee, Auth::user());
+        }
 
         $this->includeSameDepartment = false;
         $this->assignmentReason = '';
@@ -149,6 +156,7 @@ new #[Title('Report')] class extends Component {
     {
         return User::query()
             ->assignableToCases()
+            ->tap(fn ($query) => $this->limitToOwnTeam($query))
             ->with(['roles', 'department'])
             ->when($this->report->department_id !== null && ! $this->includeSameDepartment, fn ($query) => $query->where(fn ($query) => $query
                 ->outsideDepartment($this->report->department_id)
@@ -171,6 +179,7 @@ new #[Title('Report')] class extends Component {
 
         return User::query()
             ->assignableToCases()
+            ->tap(fn ($query) => $this->limitToOwnTeam($query))
             ->where('department_id', $this->report->department_id)
             ->when($this->report->assigned_to, fn ($query, int $assigneeId) => $query->whereKeyNot($assigneeId))
             ->count();
@@ -198,6 +207,25 @@ new #[Title('Report')] class extends Component {
             $this->assigneeId = $this->report->assigned_to ? (string) $this->report->assigned_to : null;
             $this->assignmentReason = '';
         }
+    }
+
+    /**
+     * Supervisors assign only within their own team (or to themselves).
+     * Admins and superadmins may assign anyone. The current assignee is
+     * always kept so an existing assignment still shows.
+     */
+    private function limitToOwnTeam($query): void
+    {
+        $user = Auth::user();
+
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        $query->where(fn ($query) => $query
+            ->where('users.id', $user->id)
+            ->orWhere('supervisor_id', $user->id)
+            ->when($this->report->assigned_to, fn ($query, int $assigneeId) => $query->orWhere('users.id', $assigneeId)));
     }
 
     private function isSameDepartment(User $staff): bool
@@ -370,7 +398,7 @@ new #[Title('Report')] class extends Component {
                             <flux:icon :name="$activity->type->icon()" variant="mini" class="mt-0.5 shrink-0 text-zinc-400" />
                             <div class="min-w-0 flex-1">
                                 <div class="text-sm">
-                                    <span class="font-medium">{{ $activity->user?->full_name ?? __('Former staff member') }}</span>
+                                    <span class="font-medium">{{ $activity->is_automatic ? __('System') : ($activity->user?->full_name ?? __('Former staff member')) }}</span>
                                     <span class="text-zinc-500">· {{ $activity->type->label() }}</span>
                                     @if ($this->activitySummaries[$activity->id] ?? '')
                                         <span class="text-zinc-500">· {{ $this->activitySummaries[$activity->id] }}</span>

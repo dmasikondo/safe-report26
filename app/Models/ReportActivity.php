@@ -17,6 +17,7 @@ class ReportActivity extends Model
     protected $fillable = [
         'report_id',
         'user_id',
+        'is_automatic',
         'type',
         'from_value',
         'to_value',
@@ -27,6 +28,7 @@ class ReportActivity extends Model
     {
         return [
             'type' => ReportActivityTypeEnum::class,
+            'is_automatic' => 'boolean',
             'body' => EncryptedWithReportKey::class,
         ];
     }
