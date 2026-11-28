@@ -9,7 +9,7 @@
     />
 
     Name, email, role, department and supervisor fields for the add and edit
-    staff pages. The inputs bind to the properties of App\Concerns\StaffAccountForm.
+    staff pages. The inputs bind to the properties of App\Traits\StaffAccountForm.
     Pass role-locked with a reason to show the role but stop it being changed.
 --}}
 @props([

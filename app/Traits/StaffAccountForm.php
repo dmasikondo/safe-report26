@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Concerns;
+namespace App\Traits;
 
 use App\Enums\RoleEnum;
 use App\Models\Department;

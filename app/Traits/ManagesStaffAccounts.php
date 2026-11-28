@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Concerns;
+namespace App\Traits;
 
 use App\Actions\Staff\CreateStaffMember;
 use App\Models\User;

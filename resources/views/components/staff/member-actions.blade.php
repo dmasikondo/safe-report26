@@ -4,7 +4,7 @@
 
     Edit, resend-invite and activate/deactivate buttons for a staff member, shown only where the viewer is allowed.
     The buttons call resendInvitation() and toggleActive() on the surrounding Livewire page,
-    which gets them from App\Concerns\ManagesStaffAccounts.
+    which gets them from App\Traits\ManagesStaffAccounts.
     Use full-width on small screens so the buttons are easy to tap.
 --}}
 @props(['member', 'fullWidth' => false])

@@ -1,6 +1,6 @@
 <?php
 
-use App\Concerns\ManagesStaffAccounts;
+use App\Traits\ManagesStaffAccounts;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;

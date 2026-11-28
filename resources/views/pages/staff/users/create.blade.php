@@ -1,7 +1,7 @@
 <?php
 
 use App\Actions\Staff\CreateStaffMember;
-use App\Concerns\StaffAccountForm;
+use App\Traits\StaffAccountForm;
 use App\Enums\RoleEnum;
 use App\Models\User;
 use Flux\Flux;

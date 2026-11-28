@@ -1,7 +1,7 @@
 <?php
 
 use App\Actions\Staff\UpdateStaffMember;
-use App\Concerns\StaffAccountForm;
+use App\Traits\StaffAccountForm;
 use App\Enums\RoleEnum;
 use App\Models\Report;
 use App\Models\User;
