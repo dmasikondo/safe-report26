@@ -179,6 +179,15 @@ class UserPolicy
     }
 
     /**
+     * Change one's own email address from Settings → Profile. Only
+     * superadmins may (via before()); everyone else asks an administrator.
+     */
+    public function changeOwnEmail(User $authUser): bool
+    {
+        return false;
+    }
+
+    /**
      * Only superadmin can assign or change roles.
      * The before() method already returns true for superadmin,
      * so this effectively returns false for everyone else.

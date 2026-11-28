@@ -2,6 +2,7 @@
 
 use App\Traits\ProfileValidationRules;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\User;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -27,18 +28,34 @@ new #[Title('Profile settings')] class extends Component {
     }
 
     /**
-     * Update the signed-in user's name. The email address is not taken from
-     * the form: only an administrator can change it, from the staff area,
-     * because changing it re-invites the account.
+     * Whether the signed-in user may change their own email address here.
+     * Only superadmins can; other staff have it changed by an administrator
+     * from the staff area, which re-invites the account.
+     */
+    #[Computed]
+    public function canChangeEmail(): bool
+    {
+        return Auth::user()->can('changeOwnEmail', User::class);
+    }
+
+    /**
+     * Update the signed-in user's name, and their email address when they are
+     * allowed to change it. Otherwise the email sent with the form is ignored.
      */
     public function updateProfileInformation(): void
     {
         $user = Auth::user();
 
-        $validated = $this->validate([
+        $rules = [
             'first_name' => $this->nameRules(),
             'last_name' => $this->nameRules(),
-        ]);
+        ];
+
+        if ($this->canChangeEmail) {
+            $rules['email'] = $this->emailRules($user->id);
+        }
+
+        $validated = $this->validate($rules);
 
         $user->update($validated);
         $this->email = $user->email;
@@ -76,7 +93,7 @@ new #[Title('Profile settings')] class extends Component {
 
     <flux:heading class="sr-only">{{ __('Profile settings') }}</flux:heading>
 
-    <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your name')">
+    <x-pages::settings.layout :heading="__('Profile')" :subheading="$this->canChangeEmail ? __('Update your name and email address') : __('Update your name')">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <div class="grid gap-6 sm:grid-cols-2">
                 <flux:input wire:model="first_name" :label="__('First name')" type="text" required autofocus autocomplete="given-name" />
@@ -84,8 +101,15 @@ new #[Title('Profile settings')] class extends Component {
             </div>
 
             <div>
-                <flux:input wire:model="email" :label="__('Email')" type="email" readonly disabled autocomplete="email" />
-                <flux:text class="mt-2 text-sm">{{ __('Only an administrator can change your email address.') }}</flux:text>
+                @if ($this->canChangeEmail)
+                    <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
+                @else
+                    <flux:input wire:model="email" :label="__('Email')" type="email" readonly disabled autocomplete="email" />
+
+                    @unless (auth()->user()->isAdmin())
+                        <flux:text class="mt-2 text-sm">{{ __('Only an administrator can change your email address.') }}</flux:text>
+                    @endunless
+                @endif
 
                 @if ($this->hasUnverifiedEmail)
                     <div>
