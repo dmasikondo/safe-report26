@@ -12,6 +12,7 @@ use App\Notifications\CaseAssignedNotification;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -55,6 +56,26 @@ class ReportWorkflowTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_every_report_gets_a_random_uuid_used_in_its_case_urls(): void
+    {
+        [$first, $second] = Report::factory()->count(2)->create();
+
+        $this->assertTrue(Str::isUuid($first->uuid));
+        $this->assertNotSame($first->uuid, $second->uuid);
+        $this->assertSame(url("/staff/reports/{$first->uuid}"), route('staff.reports.show', $first));
+    }
+
+    public function test_cases_cannot_be_opened_by_numeric_id_or_a_malformed_identifier(): void
+    {
+        $report = Report::factory()->create();
+        $this->actingAs(User::factory()->withRole(RoleEnum::SUPERVISOR)->create());
+
+        $this->get("/staff/reports/{$report->id}")->assertNotFound();
+        $this->get('/staff/reports/not-a-uuid')->assertNotFound();
+        $this->get('/staff/reports/'.Str::uuid())->assertNotFound();
+        $this->get(route('staff.reports.show', $report))->assertOk();
+    }
+
     public function test_investigator_list_shows_only_their_cases(): void
     {
         $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create();
@@ -93,6 +114,39 @@ class ReportWorkflowTest extends TestCase
             ->set('department', (string) $exams->id)
             ->assertSee('Leaked exam papers')
             ->assertDontSee('Missing canteen stock');
+    }
+
+    public function test_every_report_gets_a_short_random_case_reference(): void
+    {
+        [$first, $second] = Report::factory()->count(2)->create();
+
+        $this->assertMatchesRegularExpression('/^WB-[A-HJ-NP-Z2-9]{6}$/', $first->reference);
+        $this->assertNotSame($first->reference, $second->reference);
+    }
+
+    public function test_list_shows_the_case_reference_not_the_tracking_token(): void
+    {
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        $report = Report::factory()->create();
+
+        $this->actingAs($supervisor)
+            ->get(route('staff.reports.index'))
+            ->assertSee($report->reference)
+            ->assertDontSee($report->tracking_token);
+    }
+
+    public function test_list_can_be_searched_by_case_reference(): void
+    {
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+        $wanted = Report::factory()->create(['subject' => 'Fuel taken from workshop']);
+        Report::factory()->create(['subject' => 'Hostel rooms sold']);
+
+        $this->actingAs($supervisor);
+
+        Livewire::test('pages::staff.reports.index')
+            ->set('search', strtolower($wanted->reference))
+            ->assertSee('Fuel taken from workshop')
+            ->assertDontSee('Hostel rooms sold');
     }
 
     public function test_list_can_be_searched_by_tracking_token(): void

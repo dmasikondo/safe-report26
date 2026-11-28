@@ -301,7 +301,7 @@ new #[Title('Report')] class extends Component {
             </flux:link>
             <flux:heading size="xl" level="1" class="mt-2">{{ $report->subject }}</flux:heading>
             <div class="mt-2 flex flex-wrap items-center gap-2">
-                <span class="font-mono text-sm text-zinc-500">{{ $report->tracking_token }}</span>
+                <span class="font-mono text-sm text-zinc-500">{{ $report->reference }}</span>
                 <flux:badge size="sm" :color="$report->status->color()">{{ $report->status->label() }}</flux:badge>
                 <flux:badge size="sm" :color="$report->priorityColor()">{{ __(':priority priority', ['priority' => $report->priorityLabel()]) }}</flux:badge>
                 <flux:badge size="sm">{{ $report->category->label() }}</flux:badge>
@@ -398,7 +398,11 @@ new #[Title('Report')] class extends Component {
                             <flux:icon :name="$activity->type->icon()" variant="mini" class="mt-0.5 shrink-0 text-zinc-400" />
                             <div class="min-w-0 flex-1">
                                 <div class="text-sm">
-                                    <span class="font-medium">{{ $activity->is_automatic ? __('System') : ($activity->user?->full_name ?? __('Former staff member')) }}</span>
+                                    @if ($activity->is_automatic)
+                                        <span class="font-medium">{{ __('System') }}</span>
+                                    @else
+                                        <x-staff.user-link :user="$activity->user" :fallback="__('Former staff member')" class="font-medium" />
+                                    @endif
                                     <span class="text-zinc-500">· {{ $activity->type->label() }}</span>
                                     @if ($this->activitySummaries[$activity->id] ?? '')
                                         <span class="text-zinc-500">· {{ $this->activitySummaries[$activity->id] }}</span>
@@ -482,7 +486,7 @@ new #[Title('Report')] class extends Component {
                         </div>
                     </form>
                 @else
-                    <flux:text class="mt-2">{{ $report->assignee?->full_name ?? __('Unassigned') }}</flux:text>
+                    <flux:text class="mt-2"><x-staff.user-link :user="$report->assignee" :fallback="__('Unassigned')" /></flux:text>
                 @endcan
             </flux:card>
 

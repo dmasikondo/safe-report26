@@ -55,12 +55,24 @@ new #[Title('Dashboard')] class extends Component {
         unset($this->notifications);
     }
 
+    /**
+     * The case link is built from the stored report_uuid rather than a stored URL,
+     * so notifications sent before a change to the case URLs still open the case.
+     * A numeric report_id is still understood for notifications saved before
+     * uuids were introduced.
+     */
     public function openNotification(string $notificationId): void
     {
         $notification = Auth::user()->notifications()->findOrFail($notificationId);
         $notification->markAsRead();
 
-        $this->redirect($notification->data['url'] ?? route('dashboard'), navigate: true);
+        $report = match (true) {
+            isset($notification->data['report_uuid']) => Report::firstWhere('uuid', $notification->data['report_uuid']),
+            isset($notification->data['report_id']) => Report::find($notification->data['report_id']),
+            default => null,
+        };
+
+        $this->redirect($report ? route('staff.reports.show', $report) : route('dashboard'), navigate: true);
     }
     /**
      * Headline numbers for the signed-in staff member's caseload.

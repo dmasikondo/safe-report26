@@ -31,6 +31,9 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
         Route::livewire('users', 'pages::staff.users.index')->name('users.index');
         Route::livewire('users/create', 'pages::staff.users.create')->name('users.create');
 
+        // Staff profiles — admins, a supervisor for their team, and everyone for themselves
+        Route::livewire('users/{user}', 'pages::staff.users.show')->name('users.show');
+
         // Supervisor teams — superadmins and admins
         Route::livewire('teams', 'pages::staff.teams.index')->name('teams.index');
     });

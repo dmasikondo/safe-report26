@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notification;
  * case went to someone in their team.
  *
  * Never includes the report's subject, description or tracking token:
- * only the case number, category and priority.
+ * only the case reference, category and priority.
  */
 class CaseAssignedNotification extends Notification implements ShouldQueue
 {
@@ -47,14 +47,16 @@ class CaseAssignedNotification extends Notification implements ShouldQueue
     }
 
     /**
-     * @return array{report_id: int, message: string, url: string}
+     * The link is not stored: it is built from report_uuid when the notification
+     * is opened, so stored notifications survive changes to the case URLs.
+     *
+     * @return array{report_uuid: string, message: string}
      */
     public function toArray(object $notifiable): array
     {
         return [
-            'report_id' => $this->report->id,
+            'report_uuid' => $this->report->uuid,
             'message' => $this->message($notifiable),
-            'url' => route('staff.reports.show', $this->report),
         ];
     }
 
@@ -66,8 +68,8 @@ class CaseAssignedNotification extends Notification implements ShouldQueue
     private function headline(object $notifiable): string
     {
         return $this->isForAssignee($notifiable)
-            ? "Case #{$this->report->id} has been assigned to you"
-            : "Case #{$this->report->id} was assigned to your team";
+            ? "Case {$this->report->reference} has been assigned to you"
+            : "Case {$this->report->reference} was assigned to your team";
     }
 
     private function message(object $notifiable): string
@@ -76,7 +78,7 @@ class CaseAssignedNotification extends Notification implements ShouldQueue
         $category = $this->report->category->label();
 
         return $this->isForAssignee($notifiable)
-            ? "Case #{$this->report->id} ({$category}) has been assigned to you{$how}."
-            : "Case #{$this->report->id} ({$category}) was assigned{$how} to {$this->assignee->full_name} in your team.";
+            ? "Case {$this->report->reference} ({$category}) has been assigned to you{$how}."
+            : "Case {$this->report->reference} ({$category}) was assigned{$how} to {$this->assignee->full_name} in your team.";
     }
 }

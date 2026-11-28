@@ -200,7 +200,7 @@ class StaffManagementTest extends TestCase
         $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create();
 
         Livewire::test('pages::staff.users.index')
-            ->call('toggleActive', $investigator->id)
+            ->call('toggleActive', $investigator->uuid)
             ->assertHasNoErrors();
 
         $this->assertFalse($investigator->fresh()->is_active);
@@ -212,7 +212,7 @@ class StaffManagementTest extends TestCase
         $otherAdmin = User::factory()->withRole(RoleEnum::ADMIN)->create();
 
         Livewire::test('pages::staff.users.index')
-            ->call('toggleActive', $otherAdmin->id)
+            ->call('toggleActive', $otherAdmin->uuid)
             ->assertForbidden();
 
         $this->assertTrue($otherAdmin->fresh()->is_active);
@@ -224,10 +224,68 @@ class StaffManagementTest extends TestCase
         $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create();
 
         Livewire::test('pages::staff.users.index')
-            ->call('resendInvitation', $investigator->id)
+            ->call('resendInvitation', $investigator->uuid)
             ->assertHasNoErrors();
 
         Notification::assertSentTo($investigator, StaffInvitationNotification::class);
+    }
+
+    public function test_member_card_shows_the_staff_members_details_and_actions(): void
+    {
+        $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create(['first_name' => 'Chipo', 'last_name' => 'Mutasa']);
+        $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create([
+            'first_name' => 'Tendai',
+            'last_name' => 'Moyo',
+            'email' => 'tendai.moyo@example.org',
+            'department_id' => Department::factory()->create(['name' => 'Procurement'])->id,
+            'supervisor_id' => $supervisor->id,
+        ]);
+
+        $this->blade('<x-staff.member-card :member="$member" />', ['member' => $investigator->load(['roles', 'department', 'supervisor'])])
+            ->assertSee('Tendai Moyo')
+            ->assertSee('tendai.moyo@example.org')
+            ->assertSee(RoleEnum::INVESTIGATOR->label())
+            ->assertSee('Procurement')
+            ->assertSee('Chipo Mutasa')
+            ->assertSee('Active')
+            ->assertSee('Never')
+            ->assertSee('Resend invite')
+            ->assertSee('Deactivate')
+            ->assertSeeHtml('wire:click="toggleActive(\''.$investigator->uuid.'\')"');
+    }
+
+    public function test_member_card_hides_actions_the_viewer_is_not_allowed_to_take(): void
+    {
+        $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
+        $otherAdmin = User::factory()->withRole(RoleEnum::ADMIN)->create();
+
+        $this->blade('<x-staff.member-card :member="$member" />', ['member' => $otherAdmin->load(['roles', 'department', 'supervisor'])])
+            ->assertSee($otherAdmin->full_name)
+            ->assertDontSee('Resend invite')
+            ->assertDontSee('Deactivate')
+            ->assertDontSeeHtml('wire:click');
+    }
+
+    public function test_staff_list_renders_both_the_card_and_table_views(): void
+    {
+        $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
+        $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create();
+
+        Livewire::test('pages::staff.users.index')
+            ->assertSeeHtml('wire:key="user-card-'.$investigator->id.'"')
+            ->assertSeeHtml('wire:key="user-'.$investigator->id.'"');
+    }
+
+    public function test_staff_list_shows_the_empty_message_in_both_views(): void
+    {
+        $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
+
+        $html = Livewire::test('pages::staff.users.index')
+            ->set('search', 'nobody-matches-this')
+            ->html();
+
+        $this->assertSame(2, substr_count($html, 'No staff match these filters.'));
     }
 
     public function test_invitation_link_lets_the_new_staff_member_set_a_password(): void

@@ -1,9 +1,8 @@
 <?php
 
-use App\Actions\Staff\CreateStaffMember;
+use App\Concerns\ManagesStaffAccounts;
 use App\Enums\RoleEnum;
 use App\Models\User;
-use Flux\Flux;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -12,7 +11,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 
 new #[Title('Staff')] class extends Component {
-    use WithPagination;
+    use ManagesStaffAccounts, WithPagination;
 
     #[Url]
     public string $search = '';
@@ -30,33 +29,6 @@ new #[Title('Staff')] class extends Component {
         if (in_array($property, ['search', 'role'], strict: true)) {
             $this->resetPage();
         }
-    }
-
-    public function toggleActive(int $userId): void
-    {
-        $user = User::findOrFail($userId);
-
-        $this->authorize('deactivate', $user);
-
-        $user->is_active ? $user->deactivate() : $user->activate();
-
-        Flux::toast(
-            variant: 'success',
-            text: $user->is_active
-                ? __(':name can sign in again.', ['name' => $user->full_name])
-                : __(':name has been deactivated and signed out.', ['name' => $user->full_name]),
-        );
-    }
-
-    public function resendInvitation(int $userId, CreateStaffMember $createStaffMember): void
-    {
-        $user = User::with('roles')->findOrFail($userId);
-
-        $this->authorize('resendInvitation', $user);
-
-        $createStaffMember->sendInvitation($user);
-
-        Flux::toast(variant: 'success', text: __('Set-password link sent to :email.', ['email' => $user->email]));
     }
 
     #[Computed]
@@ -101,68 +73,48 @@ new #[Title('Staff')] class extends Component {
         </flux:select>
     </div>
 
-    <flux:table :paginate="$this->staff">
-        <flux:table.columns>
-            <flux:table.column>{{ __('Name') }}</flux:table.column>
-            <flux:table.column>{{ __('Role') }}</flux:table.column>
-            <flux:table.column>{{ __('Department') }}</flux:table.column>
-            <flux:table.column>{{ __('Supervisor') }}</flux:table.column>
-            <flux:table.column>{{ __('Status') }}</flux:table.column>
-            <flux:table.column>{{ __('Last sign-in') }}</flux:table.column>
-            <flux:table.column></flux:table.column>
-        </flux:table.columns>
+    <div class="flex flex-col gap-3 lg:hidden">
+        @forelse ($this->staff as $member)
+            <x-staff.member-card :member="$member" wire:key="user-card-{{ $member->id }}" />
+        @empty
+            <flux:text class="py-8 text-center">{{ __('No staff match these filters.') }}</flux:text>
+        @endforelse
 
-        <flux:table.rows>
-            @forelse ($this->staff as $member)
-                <flux:table.row wire:key="user-{{ $member->id }}">
-                    <flux:table.cell>
-                        <div class="font-medium">{{ $member->full_name }}</div>
-                        <div class="text-xs text-zinc-500">{{ $member->email }}</div>
-                    </flux:table.cell>
-                    <flux:table.cell>{{ $member->roleLabels() ?: '—' }}</flux:table.cell>
-                    <flux:table.cell>{{ $member->department?->name ?? '—' }}</flux:table.cell>
-                    <flux:table.cell>
-                        @if ($member->isInvestigator())
-                            @if ($member->supervisor)
-                                {{ $member->supervisor->full_name }}
-                            @else
-                                <span class="text-zinc-400">{{ __('Unassigned') }}</span>
-                            @endif
-                        @else
-                            —
-                        @endif
-                    </flux:table.cell>
-                    <flux:table.cell>
-                        <flux:badge size="sm" :color="$member->is_active ? 'green' : 'zinc'">
-                            {{ $member->is_active ? __('Active') : __('Deactivated') }}
-                        </flux:badge>
-                    </flux:table.cell>
-                    <flux:table.cell>{{ $member->last_login_at?->diffForHumans() ?? __('Never') }}</flux:table.cell>
-                    <flux:table.cell align="end">
-                        <div class="flex justify-end gap-2">
-                            @can('resendInvitation', $member)
-                                <flux:button size="xs" variant="ghost" wire:click="resendInvitation({{ $member->id }})">
-                                    {{ __('Resend invite') }}
-                                </flux:button>
-                            @endcan
-                            @can('deactivate', $member)
-                                <flux:button
-                                    size="xs"
-                                    :variant="$member->is_active ? 'danger' : 'filled'"
-                                    wire:click="toggleActive({{ $member->id }})"
-                                    wire:confirm="{{ $member->is_active ? __('Deactivate this account? They will be signed out immediately.') : __('Reactivate this account?') }}"
-                                >
-                                    {{ $member->is_active ? __('Deactivate') : __('Activate') }}
-                                </flux:button>
-                            @endcan
-                        </div>
-                    </flux:table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="7" class="py-8 text-center">{{ __('No staff match these filters.') }}</flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+        <flux:pagination :paginator="$this->staff" />
+    </div>
+
+    <div class="hidden lg:block">
+        <flux:table :paginate="$this->staff">
+            <flux:table.columns>
+                <flux:table.column>{{ __('Name') }}</flux:table.column>
+                <flux:table.column>{{ __('Role') }}</flux:table.column>
+                <flux:table.column>{{ __('Department') }}</flux:table.column>
+                <flux:table.column>{{ __('Supervisor') }}</flux:table.column>
+                <flux:table.column>{{ __('Status') }}</flux:table.column>
+                <flux:table.column>{{ __('Last sign-in') }}</flux:table.column>
+                <flux:table.column></flux:table.column>
+            </flux:table.columns>
+    
+            <flux:table.rows>
+                @forelse ($this->staff as $member)
+                    <flux:table.row wire:key="user-{{ $member->id }}">
+                        <flux:table.cell>
+                            <x-staff.user-link :user="$member" class="font-medium" />
+                            <div class="text-xs text-zinc-500">{{ $member->email }}</div>
+                        </flux:table.cell>
+                        <flux:table.cell>{{ $member->roleLabels() ?: '—' }}</flux:table.cell>
+                        <flux:table.cell>{{ $member->department?->name ?? '—' }}</flux:table.cell>
+                        <flux:table.cell><x-staff.supervisor :member="$member" /></flux:table.cell>
+                        <flux:table.cell><x-staff.status-badge :member="$member" /></flux:table.cell>
+                        <flux:table.cell>{{ $member->last_login_at?->diffForHumans() ?? __('Never') }}</flux:table.cell>
+                        <flux:table.cell align="end"><x-staff.member-actions :member="$member" /></flux:table.cell>
+                    </flux:table.row>
+                @empty
+                    <flux:table.row>
+                        <flux:table.cell colspan="7" class="py-8 text-center">{{ __('No staff match these filters.') }}</flux:table.cell>
+                    </flux:table.row>
+                @endforelse
+            </flux:table.rows>
+        </flux:table>
+    </div>
 </div>

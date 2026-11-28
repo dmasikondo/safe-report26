@@ -56,7 +56,9 @@ new #[Title('Reports')] class extends Component {
         return Report::query()
             ->visibleTo($user)
             ->with(['assignee', 'department'])
-            ->when($search !== '', fn ($query) => $query->where('tracking_token', strtoupper($search)))
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->where('reference', strtoupper($search))
+                ->orWhere('tracking_token', strtoupper($search))))
             ->when($this->status === 'open', fn ($query) => $query->open())
             ->when($this->status === 'finished', fn ($query) => $query->closed())
             ->when(ReportStatusEnum::tryFrom($this->status), fn ($query, $status) => $query->where('status', $status->value))
@@ -93,7 +95,7 @@ new #[Title('Reports')] class extends Component {
     </div>
 
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Tracking token')" />
+        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Case reference or tracking token')" />
 
         <flux:select wire:model.live="status">
             <flux:select.option value="open">{{ __('Open cases') }}</flux:select.option>
@@ -136,47 +138,59 @@ new #[Title('Reports')] class extends Component {
         </div>
     </div>
 
-    <flux:table :paginate="$this->reports">
-        <flux:table.columns>
-            <flux:table.column>{{ __('Report') }}</flux:table.column>
-            <flux:table.column>{{ __('Category') }}</flux:table.column>
-            <flux:table.column>{{ __('Status') }}</flux:table.column>
-            <flux:table.column>{{ __('Priority') }}</flux:table.column>
-            <flux:table.column>{{ __('Assigned to') }}</flux:table.column>
-            <flux:table.column>{{ __('Received') }}</flux:table.column>
-        </flux:table.columns>
+    <div class="flex flex-col gap-3 lg:hidden">
+        @forelse ($this->reports as $report)
+            <x-staff.report-card :report="$report" wire:key="report-card-{{ $report->id }}" />
+        @empty
+            <flux:text class="py-8 text-center">{{ __('No reports match these filters.') }}</flux:text>
+        @endforelse
 
-        <flux:table.rows>
-            @forelse ($this->reports as $report)
-                <flux:table.row wire:key="report-{{ $report->id }}">
-                    <flux:table.cell class="max-w-xs">
-                        <flux:link :href="route('staff.reports.show', $report)" wire:navigate class="block truncate font-medium">
-                            {{ $report->subject }}
-                        </flux:link>
-                        <span class="font-mono text-xs text-zinc-500">{{ $report->tracking_token }}</span>
-                    </flux:table.cell>
-                    <flux:table.cell>
-                        {{ $report->category->label() }}
-                        @if ($report->department)
-                            <span class="block text-xs text-zinc-500">{{ $report->department->name }}</span>
-                        @endif
-                    </flux:table.cell>
-                    <flux:table.cell>
-                        <flux:badge size="sm" :color="$report->status->color()">{{ $report->status->label() }}</flux:badge>
-                    </flux:table.cell>
-                    <flux:table.cell>
-                        <flux:badge size="sm" :color="$report->priorityColor()">{{ $report->priorityLabel() }}</flux:badge>
-                    </flux:table.cell>
-                    <flux:table.cell>{{ $report->assignee?->full_name ?? __('Unassigned') }}</flux:table.cell>
-                    <flux:table.cell>{{ $report->created_at->diffForHumans() }}</flux:table.cell>
-                </flux:table.row>
-            @empty
-                <flux:table.row>
-                    <flux:table.cell colspan="6" class="py-8 text-center">
-                        {{ __('No reports match these filters.') }}
-                    </flux:table.cell>
-                </flux:table.row>
-            @endforelse
-        </flux:table.rows>
-    </flux:table>
+        <flux:pagination :paginator="$this->reports" />
+    </div>
+
+    <div class="hidden lg:block">
+        <flux:table :paginate="$this->reports">
+            <flux:table.columns>
+                <flux:table.column>{{ __('Report') }}</flux:table.column>
+                <flux:table.column>{{ __('Category') }}</flux:table.column>
+                <flux:table.column>{{ __('Status') }}</flux:table.column>
+                <flux:table.column>{{ __('Priority') }}</flux:table.column>
+                <flux:table.column>{{ __('Assigned to') }}</flux:table.column>
+                <flux:table.column>{{ __('Received') }}</flux:table.column>
+            </flux:table.columns>
+
+            <flux:table.rows>
+                @forelse ($this->reports as $report)
+                    <flux:table.row wire:key="report-{{ $report->id }}">
+                        <flux:table.cell class="min-w-64 max-w-md whitespace-normal">
+                            <flux:link :href="route('staff.reports.show', $report)" wire:navigate class="line-clamp-2 font-medium" :title="$report->subject">
+                                {{ $report->subject }}
+                            </flux:link>
+                            <span class="font-mono text-xs text-zinc-500">{{ $report->reference }}</span>
+                        </flux:table.cell>
+                        <flux:table.cell class="min-w-48 whitespace-normal">
+                            {{ $report->category->label() }}
+                            @if ($report->department)
+                                <span class="block text-xs text-zinc-500">{{ $report->department->name }}</span>
+                            @endif
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            <flux:badge size="sm" :color="$report->status->color()">{{ $report->status->label() }}</flux:badge>
+                        </flux:table.cell>
+                        <flux:table.cell>
+                            <flux:badge size="sm" :color="$report->priorityColor()">{{ $report->priorityLabel() }}</flux:badge>
+                        </flux:table.cell>
+                        <flux:table.cell><x-staff.user-link :user="$report->assignee" :fallback="__('Unassigned')" /></flux:table.cell>
+                        <flux:table.cell>{{ $report->created_at->diffForHumans() }}</flux:table.cell>
+                    </flux:table.row>
+                @empty
+                    <flux:table.row>
+                        <flux:table.cell colspan="6" class="py-8 text-center">
+                            {{ __('No reports match these filters.') }}
+                        </flux:table.cell>
+                    </flux:table.row>
+                @endforelse
+            </flux:table.rows>
+        </flux:table>
+    </div>
 </div>

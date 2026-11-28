@@ -42,7 +42,7 @@ class SensitiveReportReceivedNotification extends Notification implements Should
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject("Case #{$this->report->id} needs manual assignment")
+            ->subject("Case {$this->report->reference} needs manual assignment")
             ->greeting('Hello '.$notifiable->first_name.',')
             ->line($this->message())
             ->line('Priority: '.Report::labelForPriority($this->report->priority))
@@ -51,22 +51,24 @@ class SensitiveReportReceivedNotification extends Notification implements Should
     }
 
     /**
-     * @return array{report_id: int, message: string, url: string}
+     * The link is not stored: it is built from report_uuid when the notification
+     * is opened, so stored notifications survive changes to the case URLs.
+     *
+     * @return array{report_uuid: string, message: string}
      */
     public function toArray(object $notifiable): array
     {
         return [
-            'report_id' => $this->report->id,
+            'report_uuid' => $this->report->uuid,
             'message' => $this->message(),
-            'url' => route('staff.reports.show', $this->report),
         ];
     }
 
     private function message(): string
     {
         return match ($this->reason) {
-            self::SEXUAL_HARASSMENT => "A sexual harassment report (case #{$this->report->id}) was received. These are never assigned automatically; please choose who handles it.",
-            default => "Case #{$this->report->id} ({$this->report->category->label()}) could not be assigned automatically because no investigator outside its department is available.",
+            self::SEXUAL_HARASSMENT => "A sexual harassment report (case {$this->report->reference}) was received. These are never assigned automatically; please choose who handles it.",
+            default => "Case {$this->report->reference} ({$this->report->category->label()}) could not be assigned automatically because no investigator outside its department is available.",
         };
     }
 }

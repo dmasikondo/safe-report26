@@ -173,7 +173,7 @@ new #[Title('Teams')] class extends Component {
                     @foreach ($this->unassigned as $investigator)
                         <flux:table.row wire:key="unassigned-{{ $investigator->id }}">
                             <flux:table.cell>
-                                <div class="font-medium">{{ $investigator->full_name }}</div>
+                                <x-staff.user-link :user="$investigator" class="font-medium" />
                                 @if ($investigator->supervisor)
                                     <div class="text-xs text-amber-600 dark:text-amber-400">
                                         {{ __(':name was deactivated', ['name' => $investigator->supervisor->full_name]) }}
@@ -214,7 +214,7 @@ new #[Title('Teams')] class extends Component {
             <flux:card wire:key="supervisor-{{ $supervisor->id }}" class="flex flex-col gap-4">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                        <flux:heading size="lg" class="truncate">{{ $supervisor->full_name }}</flux:heading>
+                        <flux:heading size="lg" class="truncate"><x-staff.user-link :user="$supervisor" /></flux:heading>
                         <flux:text class="text-sm">
                             {{ $supervisor->department?->name ?? __('No department') }}
                             · {{ trans_choice(':count investigator|:count investigators', $supervisor->team_count, ['count' => $supervisor->team_count]) }}
@@ -237,7 +237,7 @@ new #[Title('Teams')] class extends Component {
                         @foreach ($supervisor->team as $investigator)
                             <li wire:key="member-{{ $investigator->id }}" class="flex flex-wrap items-center justify-between gap-2 py-2">
                                 <div class="min-w-0">
-                                    <div class="text-sm font-medium">{{ $investigator->full_name }}</div>
+                                    <x-staff.user-link :user="$investigator" class="text-sm font-medium" />
                                     <div class="text-xs text-zinc-500">{{ $investigator->department?->name ?? '—' }}</div>
                                 </div>
                                 <form wire:submit="assign({{ $investigator->id }})" class="flex items-center gap-2">

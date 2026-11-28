@@ -31,11 +31,16 @@ class UserPolicy
 
     /**
      * Admins can view any user profile.
+     * Supervisors can view the investigators in their own team.
      * All users can view their own profile.
      */
     public function view(User $authUser, User $targetUser): bool
     {
         if ($authUser->id === $targetUser->id) {
+            return true;
+        }
+
+        if ($authUser->hasRole(RoleEnum::SUPERVISOR) && $targetUser->supervisor_id === $authUser->id) {
             return true;
         }
 

@@ -2,5 +2,38 @@
     "attribution": {
         "commit": "",
         "pr": ""
+    },
+    "permissions": {
+        "defaultMode": "acceptEdits",
+        "allow": [
+            "Bash(php artisan:*)",
+            "Bash(composer:*)",
+            "Bash(npm:*)",
+            "Bash(npx:*)",
+            "Bash(git status)",
+            "Bash(git diff:*)",
+            "Bash(git log:*)",
+            "Bash(git add:*)",
+            "Bash(git commit:*)",
+            "PowerShell(php artisan:*)",
+            "PowerShell(composer:*)",
+            "PowerShell(npm:*)",
+            "PowerShell(npx:*)",
+            "PowerShell(git status)",
+            "PowerShell(git diff:*)",
+            "PowerShell(git log:*)",
+            "PowerShell(git add:*)",
+            "PowerShell(git commit:*)"
+        ],
+        "deny": [
+            "Bash(rm -rf:*)",
+            "Bash(git push --force:*)",
+            "Bash(php artisan migrate:fresh:*)",
+            "Bash(php artisan db:wipe:*)",
+            "PowerShell(Remove-Item:*)",
+            "PowerShell(git push --force:*)",
+            "PowerShell(php artisan migrate:fresh:*)",
+            "PowerShell(php artisan db:wipe:*)"
+        ]
     }
 }

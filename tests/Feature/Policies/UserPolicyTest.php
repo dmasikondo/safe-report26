@@ -88,6 +88,15 @@ class UserPolicyTest extends TestCase
         $this->assertFalse($admin->can('resendInvitation', User::factory()->withRole(RoleEnum::ADMIN)->create()));
     }
 
+    public function test_supervisor_can_view_only_investigators_in_their_own_team(): void
+    {
+        $supervisor = User::factory()->withRole(RoleEnum::SUPERVISOR)->create();
+
+        $this->assertTrue($supervisor->can('view', User::factory()->withRole(RoleEnum::INVESTIGATOR)->create(['supervisor_id' => $supervisor->id])));
+        $this->assertFalse($supervisor->can('view', User::factory()->withRole(RoleEnum::INVESTIGATOR)->create()));
+        $this->assertFalse($supervisor->can('view', User::factory()->withRole(RoleEnum::SUPERVISOR)->create()));
+    }
+
     public function test_role_checks_work_when_roles_are_eager_loaded(): void
     {
         $admin = User::factory()->withRole(RoleEnum::ADMIN)->create()->load('roles');

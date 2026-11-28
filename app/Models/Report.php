@@ -8,6 +8,7 @@ use App\Enums\ReportCategoryEnum;
 use App\Enums\ReportStatusEnum;
 use Database\Factories\ReportFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,10 +21,16 @@ use InvalidArgumentException;
 class Report extends Model
 {
     /** @use HasFactory<ReportFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasUuids, SoftDeletes;
 
     /** @var array<int, int> */
     public const PRIORITIES = [1, 2, 3];
+
+    /**
+     * Characters used in case references: no 0/O or 1/I, so a reference
+     * can be read out over the phone without confusion.
+     */
+    private const REFERENCE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
     /**
      * Mirror the column defaults so a freshly created model is usable
@@ -70,7 +77,33 @@ class Report extends Model
         ];
     }
 
-    // ── Boot: auto-generate tracking token ───────────────────────────────
+    // ── Route key: random uuid instead of the numeric id ─────────────────
+
+    /**
+     * The numeric id stays the primary key; the uuid column is filled automatically
+     * and used in URLs instead, so case links cannot be guessed or enumerated.
+     *
+     * @return array<int, string>
+     */
+    public function uniqueIds(): array
+    {
+        return ['uuid'];
+    }
+
+    /**
+     * Fully random (version 4) so the identifier does not reveal when the report was filed.
+     */
+    public function newUniqueId(): string
+    {
+        return (string) Str::uuid();
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
+
+    // ── Boot: auto-generate tracking token and case reference ────────────
 
     protected static function booted(): void
     {
@@ -78,7 +111,31 @@ class Report extends Model
             if (empty($report->tracking_token)) {
                 $report->tracking_token = strtoupper(Str::random(8).'-'.Str::random(8));
             }
+
+            if (empty($report->reference)) {
+                $report->reference = self::generateUniqueReference();
+            }
         });
+    }
+
+    /**
+     * A short random reference such as WB-7K3QXM. Staff use it to refer to a
+     * case; it reveals nothing about case volume and, unlike the tracking
+     * token, gives no access to the public tracking page.
+     */
+    public static function generateUniqueReference(): string
+    {
+        do {
+            $code = '';
+
+            for ($i = 0; $i < 6; $i++) {
+                $code .= self::REFERENCE_ALPHABET[random_int(0, strlen(self::REFERENCE_ALPHABET) - 1)];
+            }
+
+            $reference = 'WB-'.$code;
+        } while (self::withTrashed()->where('reference', $reference)->exists());
+
+        return $reference;
     }
 
     // ── Relationships ─────────────────────────────────────────────────────
