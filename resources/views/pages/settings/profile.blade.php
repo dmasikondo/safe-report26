@@ -27,21 +27,21 @@ new #[Title('Profile settings')] class extends Component {
     }
 
     /**
-     * Update the profile information for the currently authenticated user.
+     * Update the signed-in user's name. The email address is not taken from
+     * the form: only an administrator can change it, from the staff area,
+     * because changing it re-invites the account.
      */
     public function updateProfileInformation(): void
     {
         $user = Auth::user();
 
-        $validated = $this->validate($this->profileRules($user->id));
+        $validated = $this->validate([
+            'first_name' => $this->nameRules(),
+            'last_name' => $this->nameRules(),
+        ]);
 
-        $user->fill($validated);
-
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
-
-        $user->save();
+        $user->update($validated);
+        $this->email = $user->email;
 
         Flux::toast(variant: 'success', text: __('Profile updated.'));
     }
@@ -69,13 +69,6 @@ new #[Title('Profile settings')] class extends Component {
     {
         return Auth::user() instanceof MustVerifyEmail && ! Auth::user()->hasVerifiedEmail();
     }
-
-    #[Computed]
-    public function showDeleteUser(): bool
-    {
-        return ! Auth::user() instanceof MustVerifyEmail
-            || (Auth::user() instanceof MustVerifyEmail && Auth::user()->hasVerifiedEmail());
-    }
 }; ?>
 
 <section class="w-full">
@@ -83,7 +76,7 @@ new #[Title('Profile settings')] class extends Component {
 
     <flux:heading class="sr-only">{{ __('Profile settings') }}</flux:heading>
 
-    <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your name and email address')">
+    <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your name')">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <div class="grid gap-6 sm:grid-cols-2">
                 <flux:input wire:model="first_name" :label="__('First name')" type="text" required autofocus autocomplete="given-name" />
@@ -91,7 +84,8 @@ new #[Title('Profile settings')] class extends Component {
             </div>
 
             <div>
-                <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
+                <flux:input wire:model="email" :label="__('Email')" type="email" readonly disabled autocomplete="email" />
+                <flux:text class="mt-2 text-sm">{{ __('Only an administrator can change your email address.') }}</flux:text>
 
                 @if ($this->hasUnverifiedEmail)
                     <div>
@@ -121,9 +115,5 @@ new #[Title('Profile settings')] class extends Component {
 
             </div>
         </form>
-
-        @if ($this->showDeleteUser)
-            <livewire:pages::settings.delete-user-form />
-        @endif
     </x-pages::settings.layout>
 </section>
