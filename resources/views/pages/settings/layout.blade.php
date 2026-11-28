@@ -4,6 +4,12 @@
             <flux:navlist.item :href="route('profile.edit')" wire:navigate>{{ __('Profile') }}</flux:navlist.item>
             <flux:navlist.item :href="route('security.edit')" wire:navigate>{{ __('Security') }}</flux:navlist.item>
             <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
+
+            @can('configureAutoAssignment', App\Models\Report::class)
+                <flux:navlist.group :heading="__('Organisation')" class="mt-4">
+                    <flux:navlist.item :href="route('case-assignment.edit')" wire:navigate>{{ __('Case assignment') }}</flux:navlist.item>
+                </flux:navlist.group>
+            @endcan
         </flux:navlist>
     </div>
 

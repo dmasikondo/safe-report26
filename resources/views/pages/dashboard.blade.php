@@ -2,7 +2,6 @@
 
 use App\Models\Report;
 use App\Models\Setting;
-use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -10,26 +9,14 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Dashboard')] class extends Component {
-    public bool $autoAssign = true;
-
-    public function mount(): void
-    {
-        $this->autoAssign = Setting::autoAssignEnabled();
-    }
-
     /**
-     * Admins switch automatic case assignment on or off.
+     * Whether new reports are assigned automatically, shown to admins with a
+     * link to the setting.
      */
-    public function updatedAutoAssign(bool $enabled): void
+    #[Computed]
+    public function autoAssignEnabled(): bool
     {
-        $this->authorize('configureAutoAssignment', Report::class);
-
-        Setting::put(Setting::AUTO_ASSIGN_CASES, $enabled);
-
-        Flux::toast(
-            variant: 'success',
-            text: $enabled ? __('Automatic assignment turned on.') : __('Automatic assignment turned off.'),
-        );
+        return Setting::autoAssignEnabled();
     }
 
     /**
@@ -134,13 +121,15 @@ new #[Title('Dashboard')] class extends Component {
     </div>
 
     @can('configureAutoAssignment', App\Models\Report::class)
-        <flux:card>
-            <flux:switch
-                wire:model.live="autoAssign"
-                :label="__('Automatic case assignment')"
-                :description="__('New reports go to the active investigator outside the report\'s department with the fewest open cases. Sexual harassment reports are never assigned automatically; admins are notified instead.')"
-            />
-        </flux:card>
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+            <flux:icon.arrow-path-rounded-square variant="mini" class="size-4 text-zinc-400" />
+            <span class="text-zinc-600 dark:text-zinc-400">{{ __('Automatic assignment:') }}</span>
+            <flux:badge size="sm" :color="$this->autoAssignEnabled ? 'green' : 'zinc'">
+                {{ $this->autoAssignEnabled ? __('On') : __('Off') }}
+            </flux:badge>
+            <span class="text-zinc-400" aria-hidden="true">·</span>
+            <flux:link :href="route('case-assignment.edit')" wire:navigate>{{ __('Change') }}</flux:link>
+        </div>
     @endcan
 
     @if ($this->notifications->isNotEmpty())

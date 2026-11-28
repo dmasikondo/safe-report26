@@ -37,12 +37,12 @@ class DashboardTest extends TestCase
         $this->seed(RoleSeeder::class);
         $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
 
-        Livewire::test('pages::dashboard')
+        Livewire::test('pages::settings.case-assignment')
             ->assertSee('Automatic case assignment')
             ->set('autoAssign', false);
         $this->assertFalse(Setting::autoAssignEnabled());
 
-        Livewire::test('pages::dashboard')
+        Livewire::test('pages::settings.case-assignment')
             ->assertSet('autoAssign', false)
             ->set('autoAssign', true);
         $this->assertTrue(Setting::autoAssignEnabled());
@@ -53,12 +53,41 @@ class DashboardTest extends TestCase
         $this->seed(RoleSeeder::class);
         $this->actingAs(User::factory()->withRole(RoleEnum::SUPERVISOR)->create());
 
-        Livewire::test('pages::dashboard')
-            ->assertDontSee('Automatic case assignment')
-            ->set('autoAssign', false)
-            ->assertForbidden();
+        $this->get(route('case-assignment.edit'))->assertForbidden();
+
+        $this->get(route('profile.edit'))
+            ->assertOk()
+            ->assertDontSee(route('case-assignment.edit'));
 
         $this->assertTrue(Setting::autoAssignEnabled());
+    }
+
+    public function test_settings_menu_offers_case_assignment_to_admins(): void
+    {
+        $this->seed(RoleSeeder::class);
+        $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create());
+
+        $this->get(route('profile.edit'))
+            ->assertOk()
+            ->assertSee('Organisation')
+            ->assertSee(route('case-assignment.edit'));
+    }
+
+    public function test_dashboard_shows_automatic_assignment_status_to_admins_only(): void
+    {
+        $this->seed(RoleSeeder::class);
+        Setting::put(Setting::AUTO_ASSIGN_CASES, false);
+
+        $this->actingAs(User::factory()->withRole(RoleEnum::ADMIN)->create())
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSeeInOrder(['Automatic assignment:', 'Off'])
+            ->assertSee(route('case-assignment.edit'));
+
+        $this->actingAs(User::factory()->withRole(RoleEnum::SUPERVISOR)->create())
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Automatic assignment:');
     }
 
     public function test_unread_notifications_are_listed_and_can_be_marked_read(): void
