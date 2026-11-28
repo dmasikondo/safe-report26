@@ -14,7 +14,7 @@
     <x-list-card.detail :label="__('Supervisor')"><x-staff.supervisor :member="$member" /></x-list-card.detail>
     <x-list-card.detail :label="__('Last sign-in')">{{ $member->last_login_at?->diffForHumans() ?? __('Never') }}</x-list-card.detail>
 
-    @canany(['resendInvitation', 'deactivate'], $member)
+    @canany(['editStaffAccount', 'resendInvitation', 'deactivate'], $member)
         <x-slot:actions><x-staff.member-actions :member="$member" full-width /></x-slot:actions>
     @endcanany
 </x-list-card>

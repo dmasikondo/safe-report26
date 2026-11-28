@@ -14,7 +14,7 @@ class UserPolicy
      */
     public function before(User $authUser, string $ability): ?bool
     {
-        if ($authUser->isSuperAdmin() && ! in_array($ability, ['deactivate', 'delete'], strict: true)) {
+        if ($authUser->isSuperAdmin() && ! in_array($ability, ['deactivate', 'delete', 'editStaffAccount', 'changeRole'], strict: true)) {
             return true;
         }
 
@@ -99,6 +99,53 @@ class UserPolicy
         }
 
         return $authUser->isAdmin();
+    }
+
+    /**
+     * Edit another person's staff account from the staff area. Nobody edits
+     * their own account here (that is Settings → Profile), superadmins may
+     * edit everyone else, and admins may edit supervisors and investigators.
+     */
+    public function editStaffAccount(User $authUser, User $targetUser): bool
+    {
+        if ($authUser->id === $targetUser->id) {
+            return false;
+        }
+
+        if ($authUser->isSuperAdmin()) {
+            return true;
+        }
+
+        return $this->update($authUser, $targetUser);
+    }
+
+    /**
+     * Move a staff account to another role. The editor must be allowed to
+     * create both the current and the new role, so admins can only switch
+     * between supervisor and investigator. The last active superadmin can
+     * never be demoted.
+     */
+    public function changeRole(User $authUser, User $targetUser, RoleEnum $newRole): bool
+    {
+        if (! $this->editStaffAccount($authUser, $targetUser)) {
+            return false;
+        }
+
+        $currentRole = $targetUser->primaryRole();
+
+        if ($currentRole === $newRole) {
+            return true;
+        }
+
+        if (! $authUser->canCreateRole($newRole) || ($currentRole !== null && ! $authUser->canCreateRole($currentRole))) {
+            return false;
+        }
+
+        if ($currentRole === RoleEnum::SUPERADMIN) {
+            return User::active()->withRole(RoleEnum::SUPERADMIN)->whereKeyNot($targetUser->id)->exists();
+        }
+
+        return true;
     }
 
     /**

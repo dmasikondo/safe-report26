@@ -72,6 +72,29 @@ class UserPolicyTest extends TestCase
         $this->assertFalse($admin->can('deactivate', User::factory()->withRole(RoleEnum::SUPERADMIN)->create()));
     }
 
+    public function test_admin_can_edit_supervisors_and_investigators_but_not_admins_or_themselves(): void
+    {
+        $admin = User::factory()->withRole(RoleEnum::ADMIN)->create();
+
+        $this->assertTrue($admin->can('editStaffAccount', User::factory()->withRole(RoleEnum::SUPERVISOR)->create()));
+        $this->assertTrue($admin->can('editStaffAccount', User::factory()->withRole(RoleEnum::INVESTIGATOR)->create()));
+        $this->assertFalse($admin->can('editStaffAccount', User::factory()->withRole(RoleEnum::ADMIN)->create()));
+        $this->assertFalse($admin->can('editStaffAccount', User::factory()->withRole(RoleEnum::SUPERADMIN)->create()));
+        $this->assertFalse($admin->can('editStaffAccount', $admin));
+    }
+
+    public function test_role_changes_are_limited_to_roles_the_editor_could_create(): void
+    {
+        $admin = User::factory()->withRole(RoleEnum::ADMIN)->create();
+        $superadmin = User::factory()->withRole(RoleEnum::SUPERADMIN)->create();
+        $investigator = User::factory()->withRole(RoleEnum::INVESTIGATOR)->create();
+
+        $this->assertTrue($admin->can('changeRole', [$investigator, RoleEnum::SUPERVISOR]));
+        $this->assertFalse($admin->can('changeRole', [$investigator, RoleEnum::ADMIN]));
+        $this->assertTrue($superadmin->can('changeRole', [$investigator, RoleEnum::ADMIN]));
+        $this->assertFalse($superadmin->can('changeRole', [$superadmin, RoleEnum::ADMIN]));
+    }
+
     public function test_superadmin_cannot_deactivate_their_own_account(): void
     {
         $superadmin = User::factory()->withRole(RoleEnum::SUPERADMIN)->create();

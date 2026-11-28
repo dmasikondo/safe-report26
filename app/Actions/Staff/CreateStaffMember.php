@@ -46,10 +46,10 @@ class CreateStaffMember
         return $user;
     }
 
-    public function sendInvitation(User $user): void
+    public function sendInvitation(User $user, bool $afterEmailChange = false): void
     {
         $roleLabel = $user->roles()->first()?->label ?? 'Staff';
 
-        $user->notify(new StaffInvitationNotification(Password::createToken($user), $roleLabel));
+        $user->notify(new StaffInvitationNotification(Password::createToken($user), $roleLabel, $afterEmailChange));
     }
 }

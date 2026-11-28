@@ -106,6 +106,22 @@ new #[Title('Staff profile')] class extends Component {
             ->visibleTo(Auth::user())
             ->where('assigned_to', $this->user->id);
     }
+
+    /**
+     * Changes administrators made to this account, shown to people who may
+     * update it (administrators, and the person themselves).
+     *
+     * @return Collection<int, App\Models\StaffActivity>|null
+     */
+    #[Computed]
+    public function accountHistory(): ?Collection
+    {
+        if (! Auth::user()->can('update', $this->user)) {
+            return null;
+        }
+
+        return $this->user->staffActivities()->with('actor')->limit(50)->get();
+    }
 }; ?>
 
 <div class="flex flex-col gap-6">
@@ -261,5 +277,34 @@ new #[Title('Staff profile')] class extends Component {
                 </flux:table>
             </div>
         </section>
+    @endif
+    {{-- ── Account history ──────────────────────────────────────────── --}}
+    @if ($this->accountHistory !== null)
+        <flux:card class="flex flex-col gap-4">
+            <div>
+                <flux:heading size="lg" level="2">{{ __('Account history') }}</flux:heading>
+                <flux:text class="mt-1">{{ __('Changes made to this account by administrators.') }}</flux:text>
+            </div>
+
+            @if ($this->accountHistory->isEmpty())
+                <flux:text>{{ __('No changes have been made since the account was created.') }}</flux:text>
+            @else
+                <ul class="divide-y divide-zinc-200 text-sm dark:divide-zinc-700">
+                    @foreach ($this->accountHistory as $change)
+                        <li wire:key="account-change-{{ $change->id }}" class="flex flex-col gap-1 py-3 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+                            <div class="min-w-0">
+                                <span class="font-medium">{{ $change->fieldLabel() }}</span>
+                                <span class="break-words text-zinc-600 dark:text-zinc-400">
+                                    {{ $change->from_value ?? __('none') }} → {{ $change->to_value ?? __('none') }}
+                                </span>
+                            </div>
+                            <div class="shrink-0 text-xs text-zinc-500">
+                                {{ $change->actor?->full_name ?? __('Removed account') }} · <time datetime="{{ $change->created_at->toIso8601String() }}" title="{{ $change->created_at->format('j M Y, H:i') }}">{{ $change->created_at->diffForHumans() }}</time>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+        </flux:card>
     @endif
 </div>

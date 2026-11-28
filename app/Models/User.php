@@ -97,6 +97,22 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(User::class, 'supervisor_id');
     }
 
+    /**
+     * Changes made to this account by administrators, newest first.
+     */
+    public function staffActivities(): HasMany
+    {
+        return $this->hasMany(StaffActivity::class)->latest()->latest('id');
+    }
+
+    /**
+     * The single role a staff account holds (accounts are created with one role).
+     */
+    public function primaryRole(): ?RoleEnum
+    {
+        return $this->roles->first()?->name;
+    }
+
     // ── Core role checks ──────────────────────────────────────────────────
 
     /**

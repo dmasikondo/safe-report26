@@ -1,33 +1,15 @@
 <?php
 
 use App\Actions\Staff\CreateStaffMember;
-use App\Concerns\ProfileValidationRules;
+use App\Concerns\StaffAccountForm;
 use App\Enums\RoleEnum;
-use App\Models\Department;
 use App\Models\User;
-use App\Support\TeamBalance;
 use Flux\Flux;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Add staff member')] class extends Component {
-    use ProfileValidationRules;
-
-    public string $first_name = '';
-
-    public string $last_name = '';
-
-    public string $email = '';
-
-    public string $role = '';
-
-    public string $department_id = '';
-
-    public string $supervisor_id = '';
+    use StaffAccountForm;
 
     public function mount(): void
     {
@@ -36,86 +18,14 @@ new #[Title('Add staff member')] class extends Component {
         $this->role = RoleEnum::INVESTIGATOR->value;
     }
 
-    /**
-     * Roles the signed-in user may give to a new account.
-     *
-     * @return array<int, RoleEnum>
-     */
-    #[Computed]
-    public function creatableRoles(): array
-    {
-        return Auth::user()->creatableRoles();
-    }
-
-    /**
-     * @return Collection<int, Department>
-     */
-    #[Computed]
-    public function departments(): Collection
-    {
-        return Department::ordered()->get(['id', 'name']);
-    }
-
-    /**
-     * Whether the chosen role needs a department (supervisors and investigators).
-     */
-    #[Computed]
-    public function roleRequiresDepartment(): bool
-    {
-        return RoleEnum::tryFrom($this->role)?->requiresDepartment() ?? false;
-    }
-
-    /**
-     * Active supervisors with their current team sizes, for the optional
-     * supervisor choice when adding an investigator.
-     *
-     * @return Collection<int, User>
-     */
-    #[Computed]
-    public function supervisors(): Collection
-    {
-        return User::query()
-            ->active()
-            ->withRole(RoleEnum::SUPERVISOR)
-            ->withCount(['team' => fn ($query) => $query->active()->withRole(RoleEnum::INVESTIGATOR)])
-            ->orderBy('first_name')
-            ->orderBy('last_name')
-            ->get();
-    }
-
-    #[Computed]
-    public function teamBalance(): TeamBalance
-    {
-        return new TeamBalance(
-            investigatorCount: User::active()->withRole(RoleEnum::INVESTIGATOR)->count(),
-            supervisorCount: $this->supervisors->count(),
-        );
-    }
-
     public function save(CreateStaffMember $createStaffMember): void
     {
         $this->authorize('create', User::class);
 
-        $validated = $this->validate([
-            ...$this->profileRules(),
-            'role' => ['required', Rule::enum(RoleEnum::class)->only($this->creatableRoles)],
-            'department_id' => [
-                Rule::requiredIf(fn (): bool => $this->roleRequiresDepartment),
-                'nullable',
-                'integer',
-                Rule::exists('departments', 'id'),
-            ],
-            'supervisor_id' => [
-                Rule::excludeIf(fn (): bool => $this->role !== RoleEnum::INVESTIGATOR->value),
-                'nullable',
-                Rule::in($this->supervisors->pluck('id')->map(fn (int $id): string => (string) $id)->all()),
-            ],
-        ], [
-            'role.enum' => __('You are not allowed to create accounts with this role.'),
-            'department_id.required' => __('Choose the department this staff member works in.'),
-            'department_id.exists' => __('Choose a department from the list.'),
-            'supervisor_id.in' => __('Choose an active supervisor.'),
-        ]);
+        $validated = $this->validate(
+            $this->staffAccountRules($this->creatableRoles),
+            [...$this->staffAccountMessages(), 'role.enum' => __('You are not allowed to create accounts with this role.')],
+        );
 
         $role = RoleEnum::from($validated['role']);
 
@@ -145,50 +55,14 @@ new #[Title('Add staff member')] class extends Component {
     </div>
 
     <form wire:submit="save" class="flex flex-col gap-6">
-        <div class="grid gap-6 sm:grid-cols-2">
-            <flux:input wire:model="first_name" :label="__('First name')" required autofocus />
-            <flux:input wire:model="last_name" :label="__('Last name')" required />
-        </div>
-
-        <flux:input wire:model="email" :label="__('Email address')" type="email" required />
-
-        <flux:radio.group wire:model.live="role" :label="__('Role')">
-            @foreach ($this->creatableRoles as $roleOption)
-                <flux:radio
-                    wire:key="role-{{ $roleOption->value }}"
-                    :value="$roleOption->value"
-                    :label="$roleOption->label()"
-                    :description="$roleOption->description()"
-                />
-            @endforeach
-        </flux:radio.group>
-
-        @if ($this->roleRequiresDepartment)
-            <flux:field>
-                <flux:label>{{ __('Department') }}</flux:label>
-                <flux:select wire:model="department_id" :placeholder="__('Choose a department')" required>
-                    @foreach ($this->departments as $department)
-                        <flux:select.option wire:key="department-{{ $department->id }}" :value="$department->id">{{ $department->name }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-                <flux:description>{{ __('Used to avoid assigning this person cases about their own department.') }}</flux:description>
-                <flux:error name="department_id" />
-            </flux:field>
-        @endif
-
-        @if ($role === App\Enums\RoleEnum::INVESTIGATOR->value && $this->supervisors->isNotEmpty())
-            <flux:field>
-                <flux:label badge="{{ __('Optional') }}">{{ __('Supervisor') }}</flux:label>
-                <flux:select wire:model="supervisor_id">
-                    <flux:select.option value="">{{ __('No supervisor yet') }}</flux:select.option>
-                    @foreach ($this->supervisors as $supervisor)
-                        <flux:select.option wire:key="supervisor-{{ $supervisor->id }}" :value="$supervisor->id">{{ $this->teamBalance->optionLabel($supervisor) }}</flux:select.option>
-                    @endforeach
-                </flux:select>
-                <flux:description>{{ __('Fair share is :fair investigators each. You can also change this later on the Teams page.', ['fair' => $this->teamBalance->fairShareLabel()]) }}</flux:description>
-                <flux:error name="supervisor_id" />
-            </flux:field>
-        @endif
+        <x-staff.account-fields
+            :roles="$this->creatableRoles"
+            :role="$role"
+            :departments="$this->departments"
+            :requires-department="$this->roleRequiresDepartment"
+            :supervisors="$this->supervisors"
+            :team-balance="$this->teamBalance"
+        />
 
         <div class="flex gap-3">
             <flux:button type="submit" variant="primary">{{ __('Create account') }}</flux:button>

@@ -33,6 +33,7 @@ Route::middleware(['auth', 'verified', 'active'])->group(function () {
 
         // Staff profiles — admins, a supervisor for their team, and everyone for themselves
         Route::livewire('users/{user}', 'pages::staff.users.show')->name('users.show');
+        Route::livewire('users/{user}/edit', 'pages::staff.users.edit')->name('users.edit');
 
         // Supervisor teams — superadmins and admins
         Route::livewire('teams', 'pages::staff.teams.index')->name('teams.index');
